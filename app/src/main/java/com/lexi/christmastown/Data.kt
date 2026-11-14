@@ -251,15 +251,21 @@ val npcs = listOf(
 /** Twinkle's party: pick a theme, get a decoration. */
 val partyThemes = listOf("Candy Land 🍭" to Item.GingerbreadHouse, "Winter Wonderland ⛄" to Item.Snowman, "Cozy Cabin 🕯️" to Item.Candles)
 
-// MARK: - Places
+// MARK: - Activities (the icons on the main screen)
 
-enum class Place(val title: String, val emoji: String, val color: Color) {
-    Home("Home", "🏠", hex(0x3D6FD6)),
-    Greenhouse("Greenhouse", "🌱", hex(0x3FAF5A)),
-    Bakery("Bakery", "🍪", hex(0xE0843A)),
-    Stable("Stable", "🦌", hex(0x9A5B34)),
-    Workshop("Workshop", "🧸", hex(0xE5394B)),
-    Santa("Santa", "🎅", hex(0xA02338)),
-    Town("Town", "🧝", hex(0x2EB5A5)),
-    Shop("Shop", "🛍️", hex(0x9B6BE0)),
+enum class Side { Left, Right }
+
+/** Each icon on the main screen. [sprite] is its pixel-art picture ("" = drawn specially). */
+enum class Place(val title: String, val sprite: String, val side: Side, val color: Color) {
+    Greenhouse("Greenhouse", "wheat", Side.Left, hex(0x3FAF5A)),
+    Bakery("Bakery", "cookie_sugar", Side.Left, hex(0xE0843A)),
+    Stable("Stable", "reindeer", Side.Left, hex(0x9A5B34)),
+    Workshop("Workshop", "teddy", Side.Left, hex(0xE5394B)),
+    SantaList("Santa's List", "santa", Side.Left, hex(0xA02338)),
+    Sleigh("Sleigh", "sleigh", Side.Left, hex(0x3D6FD6)),
+    Decorate("Decorate", "tree", Side.Right, hex(0x2E7D4A)),
+    Shop("Shop", "presents", Side.Right, hex(0x9B6BE0)),
+    Closet("Closet", "", Side.Right, hex(0xFF8FB0)),
+    Friends("Friends", "", Side.Right, hex(0x2EB5A5)),
+    Snacks("Snacks", "cocoa_mug", Side.Right, hex(0xC98B5E)),
 }

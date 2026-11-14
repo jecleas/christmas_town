@@ -74,7 +74,8 @@ class GameState(private val prefs: SharedPreferences) {
         private set
 
     // Right-now stuff (not saved)
-    var place by mutableStateOf(Place.Home)
+    /** null = the main screen (your living room). */
+    var place by mutableStateOf<Place?>(null)
     var overlay by mutableStateOf<Overlay>(Overlay.None)
     var toast by mutableStateOf<String?>(null)
     var showCreator by mutableStateOf(false)
@@ -163,6 +164,7 @@ class GameState(private val prefs: SharedPreferences) {
             )
         }
         overlay = Overlay.Morning(s.day, worked)
+        place = null
     }
 
     // MARK: Greenhouse
@@ -388,5 +390,5 @@ class GameState(private val prefs: SharedPreferences) {
         say("Best party ever! 🎉 You got a ${reward.title} for your house!")
     }
 
-    fun go(p: Place) { place = p }
+    fun go(p: Place?) { place = p }
 }
