@@ -267,5 +267,6 @@ enum class Place(val title: String, val sprite: String, val side: Side, val colo
     Shop("Shop", "presents", Side.Right, hex(0x9B6BE0)),
     Closet("Closet", "", Side.Right, hex(0xFF8FB0)),
     Friends("Friends", "", Side.Right, hex(0x2EB5A5)),
+    Phone("Phone", "phone", Side.Right, hex(0x3D6FD6)),
     Snacks("Snacks", "cocoa_mug", Side.Right, hex(0xC98B5E)),
 }

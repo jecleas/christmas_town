@@ -140,7 +140,7 @@ fun Snow(now: Long, modifier: Modifier = Modifier, count: Int = 50) {
 }
 
 fun backgroundFor(p: Place?): Brush = when (p) {
-    null, Place.Decorate, Place.Snacks -> Brush.verticalGradient(listOf(hex(0x1D2B53), hex(0x3B4A8A)))
+    null, Place.Decorate, Place.Snacks, Place.Phone -> Brush.verticalGradient(listOf(hex(0x1D2B53), hex(0x3B4A8A)))
     Place.Greenhouse -> Brush.verticalGradient(listOf(hex(0xBFE9F5), hex(0xE7F7EC)))
     Place.Bakery -> Brush.verticalGradient(listOf(hex(0xFFE3C2), hex(0xF6C08E)))
     Place.Stable -> Brush.verticalGradient(listOf(hex(0x2F3F73), hex(0x6C5B8E)))
@@ -150,7 +150,7 @@ fun backgroundFor(p: Place?): Brush = when (p) {
     Place.Shop -> Brush.verticalGradient(listOf(hex(0xE6DAFF), hex(0xC6B1F2)))
 }
 
-private val darkPlaces = setOf(null, Place.Decorate, Place.Snacks, Place.Stable, Place.SantaList, Place.Sleigh, Place.Friends, Place.Closet)
+private val darkPlaces = setOf(null, Place.Decorate, Place.Snacks, Place.Phone, Place.Stable, Place.SantaList, Place.Sleigh, Place.Friends, Place.Closet)
 fun textOn(p: Place?) = if (p in darkPlaces) Color.White else Pal.ink
 
 // MARK: - The whole app
@@ -205,6 +205,7 @@ private fun PlaceScreen(game: GameState, p: Place) = when (p) {
     Place.Shop -> ShopScreen(game)
     Place.Closet -> {}   // opened via showCreator instead
     Place.Friends -> FriendsScreen(game)
+    Place.Phone -> PhoneScreen(game)
     Place.Snacks -> SnacksScreen(game)
 }
 

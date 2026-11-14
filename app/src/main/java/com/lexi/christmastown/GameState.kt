@@ -62,6 +62,11 @@ sealed interface Overlay {
     val jobs: List<Job> = jobsFor(1),
     val kids: List<Kid> = makeKids(5),
     val kidIndex: Int = 0,
+    // Phone chats
+    val chats: Map<String, List<ChatMsg>> = emptyMap(),
+    val lastRead: Map<String, Long> = emptyMap(),
+    val lastGroupVisit: Long = 0,
+    val memory: Map<String, String> = emptyMap(),
 )
 
 fun <K> Map<K, Int>.n(k: K) = this[k] ?: 0
@@ -391,4 +396,57 @@ class GameState(private val prefs: SharedPreferences) {
     }
 
     fun go(p: Place?) { place = p }
+
+    // MARK: Phone
+
+    /** Elves you've met (talked to in Friends) are in your phone. */
+    val met get() = npcs.filter { s.hearts.n(it.name) > 0 }.map { it.name }
+
+    fun messages(thread: String) = s.chats[thread].orEmpty()
+
+    fun unread(thread: String) = messages(thread).count { it.from != ME && it.time > s.lastRead.n(thread).toLong() }
+
+    private fun Map<String, Long>.n(k: String) = this[k] ?: 0L
+
+    /** The group chat feels "live": time passes while you're away, so there are new messages when you look. */
+    val groupHasNews get() = met.isNotEmpty() && System.currentTimeMillis() - s.lastGroupVisit > 120_000
+
+    fun remember(key: String, value: String) = update { copy(memory = memory + (key to value)) }
+
+    fun post(thread: String, msgs: List<ChatMsg>) {
+        if (msgs.isEmpty()) return
+        update { copy(chats = chats + (thread to (chats[thread].orEmpty() + msgs).takeLast(80))) }
+    }
+
+    fun markRead(thread: String) = update { copy(lastRead = lastRead + (thread to System.currentTimeMillis())) }
+
+    /** Called when you open the group chat: 1–3 things happened while you were away. */
+    fun openGroup() {
+        val now = System.currentTimeMillis()
+        val since = s.lastGroupVisit
+        when {
+            met.isEmpty() -> {}
+            since == 0L -> post(GROUP, met.mapIndexed { i, n -> ChatMsg(n, listOf("Welcome to the group chat, ${s.name}! 🎄", "Yay, ${s.name} is here!! ✨", "Hi hi hi! 👋", "Hello! 🦌").random(), now - (met.size - i) * 30_000L) })
+            now - since > 60_000 -> {
+                val count = if (now - since > 30 * 60_000) 3 else (1..3).random()
+                post(GROUP, ElfBrain.groupEvents(this, met, since, now, count))
+            }
+        }
+        update { copy(lastGroupVisit = now) }
+    }
+
+    /** While you're watching, the chat sometimes keeps going. */
+    fun liveGroupEvent() {
+        val now = System.currentTimeMillis()
+        post(GROUP, ElfBrain.groupEvents(this, met, now - 30_000, now, 1).map { it.copy(time = minOf(it.time, now)) })
+        update { copy(lastGroupVisit = now) }
+    }
+
+    /** Checks what you typed. Returns the cleaned text and, if needed, the elf's safety reply. */
+    fun cleanMessage(text: String) = ChatFilter.check(text)
+
+    /** Elves get a little friendlier when you chat (once a day each). */
+    fun chatFriendship(elf: String) {
+        npcs.firstOrNull { it.name == elf }?.let { chat(it) }
+    }
 }

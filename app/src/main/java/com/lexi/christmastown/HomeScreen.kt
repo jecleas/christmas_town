@@ -127,6 +127,7 @@ private fun badge(game: GameState, p: Place): String? {
         Place.Sleigh -> jobBadge(JobKind.Deliver, 3)
         Place.Decorate -> if (Item.entries.any { game.available(it) > 0 }) "New" else null
         Place.Friends -> if (npcs.any { it.name !in s.talkedToday }) "!" else null
+        Place.Phone -> (listOf(GROUP) + game.met).sumOf { game.unread(it) }.takeIf { it > 0 }?.toString() ?: if (game.groupHasNews) "!" else null
         else -> null
     }
 }
@@ -145,6 +146,7 @@ private fun Icon(game: GameState, p: Place) {
                     Place.Friends -> Box(Modifier.size(50.dp).clip(RoundedCornerShape(8.dp)), contentAlignment = Alignment.TopCenter) { ElfPx(npcs[1].look, 60.dp) }
                     Place.Stable -> Px(p.sprite, 34.dp)
                     Place.Sleigh -> Px(p.sprite, 28.dp)
+                    Place.Phone -> Px(p.sprite, 46.dp)
                     Place.SantaList -> Px(p.sprite, 50.dp)
                     else -> Px(p.sprite, 42.dp)
                 }
