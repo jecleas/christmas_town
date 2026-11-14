@@ -24,3 +24,9 @@ export JAVA_HOME=$(brew --prefix openjdk@17)/libexec/openjdk.jdk/Contents/Home
 **Always shut down emulators/simulators and background build daemons when you've finished.**
 - `adb emu kill`, `./gradlew --stop`
 - iOS Simulator: `xcrun simctl shutdown all && osascript -e 'quit app "Simulator"'`
+
+## Music & sounds
+- All audio is 8-bit and made by `tools/make_sounds.py` (pure Python, no installs): `python3 tools/make_sounds.py <out-folder>` writes WAVs. Songs are public-domain carols (Jingle Bells, Deck the Halls, We Wish You a Merry Christmas, Silent Night, Joy to the World) so there are no licensing issues.
+- In the app: `res/raw/music_*.m4a` (compress WAV → AAC with `afconvert -f m4af -d aac in.wav out.m4a`; the 22 kHz files reject custom bitrates) and `res/raw/sfx_*.wav`.
+- `Audio.kt`: `Audio.play(Sfx.X)` for effects (SoundPool), `Audio.music(Music.X)` loops and cross-fades songs. `GameApp` in `Ui.kt` picks the song for the current place. Music/sound switches are saved in `Save` and shown on the main screen. Audio pauses in `onPause`.
+- If the user adds their own audio files (e.g. from Pixabay/Kenney, CC0), put them in `res/raw` with lowercase_underscore names and point the `Music`/`Sfx` enums at them.

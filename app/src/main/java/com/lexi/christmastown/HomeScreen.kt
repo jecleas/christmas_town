@@ -72,6 +72,10 @@ fun HubScreen(game: GameState) {
                 MoneyChip(game)
                 EnergyChip(game)
             }
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                SoundToggle(if (s.musicOn) "🎵" else "🔇", s.musicOn) { game.toggleMusic() }
+                SoundToggle(if (s.soundOn) "🔔" else "🔕", s.soundOn) { game.toggleSound() }
+            }
         }
 
         // Living room with the activity icons down both sides
@@ -107,6 +111,11 @@ fun HubScreen(game: GameState) {
             }
         }
     }
+}
+
+@Composable
+private fun SoundToggle(icon: String, on: Boolean, onClick: () -> Unit) {
+    Box(Modifier.size(34.dp, 30.dp).squish(onClick = onClick).panel(if (on) Color.White else hex(0xD5DBE6)), contentAlignment = Alignment.Center) { Txt(icon, 14) }
 }
 
 /** What the little badge on each icon says: "!" = something to do, "✓" = done, "🔒" = locked. */

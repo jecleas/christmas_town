@@ -67,6 +67,9 @@ sealed interface Overlay {
     val lastRead: Map<String, Long> = emptyMap(),
     val lastGroupVisit: Long = 0,
     val memory: Map<String, String> = emptyMap(),
+    // Settings
+    val musicOn: Boolean = true,
+    val soundOn: Boolean = true,
 )
 
 fun <K> Map<K, Int>.n(k: K) = this[k] ?: 0
@@ -121,6 +124,7 @@ class GameState(private val prefs: SharedPreferences) {
     private fun useEnergy(amount: Int): Boolean {
         if (s.energy < amount) {
             say("Too tired! 😴 Eat a cookie or some food, or go to sleep.")
+            Audio.play(Sfx.Oops)
             return false
         }
         update { copy(energy = energy - amount) }
@@ -153,6 +157,7 @@ class GameState(private val prefs: SharedPreferences) {
         val before = level
         update { copy(money = money + PAY, paidToday = true, workdays = workdays + 1) }
         overlay = Overlay.Paid(if (level > before) level else null)
+        Audio.play(if (level > before) Sfx.LevelUp else Sfx.Coins)
         if (level >= 3) update { copy(plots = plots + (plots.size until 9).map { Plot(it) }) }
     }
 
@@ -179,15 +184,17 @@ class GameState(private val prefs: SharedPreferences) {
         when (plot.stage(System.currentTimeMillis())) {
             0 -> {
                 val c = selectedSeed
-                if (s.seeds.n(c) <= 0) { say("No ${c.title.lowercase()} seeds! Buy some at the Shop 🛍️"); return }
+                if (s.seeds.n(c) <= 0) { say("No ${c.title.lowercase()} seeds! Buy some at the Shop 🛍️"); Audio.play(Sfx.Oops); return }
+                Audio.play(Sfx.Pop)
                 update { copy(seeds = seeds.add(c, -1), plots = plots.map { if (it.id == id) it.copy(crop = c) else it }) }
             }
-            1 -> update { copy(plots = plots.map { if (it.id == id) it.copy(wateredAt = System.currentTimeMillis()) else it }) }
+            1 -> { update { copy(plots = plots.map { if (it.id == id) it.copy(wateredAt = System.currentTimeMillis()) else it }) }; Audio.play(Sfx.Tap) }
             2 -> say("Still growing… 🌱")
             3 -> {
                 val c = plot.crop!!
                 update { copy(crops = crops.add(c, HARVEST), plots = plots.map { if (it.id == id) Plot(id) else it }) }
                 say("Picked $HARVEST ${c.plural}!")
+                Audio.play(Sfx.Pop)
             }
         }
     }
@@ -224,13 +231,14 @@ class GameState(private val prefs: SharedPreferences) {
     fun canBake(c: Cookie) = c.recipe.all { (crop, n) -> s.crops.n(crop) >= n }
 
     fun bake(c: Cookie): Boolean {
-        if (!canBake(c)) { say("Not enough ingredients! Grow some in the Greenhouse 🌱"); return false }
+        if (!canBake(c)) { say("Not enough ingredients! Grow some in the Greenhouse 🌱"); Audio.play(Sfx.Oops); return false }
         if (!useEnergy(5)) return false
         update {
             var cr = crops
             c.recipe.forEach { (crop, n) -> cr = cr.add(crop, -n) }
             copy(crops = cr, cookies = cookies.add(c, 1))
         }
+        Audio.play(Sfx.Ding)
         progress(JobKind.Bake)
         return true
     }
@@ -242,6 +250,7 @@ class GameState(private val prefs: SharedPreferences) {
     fun finishToy(t: Toy) {
         update { copy(toys = toys.add(t, 1)) }
         say("You made a ${t.title}! 🎁")
+        Audio.play(Sfx.Ding)
         progress(JobKind.Toys)
     }
 
@@ -249,10 +258,11 @@ class GameState(private val prefs: SharedPreferences) {
 
     fun feed(name: String) {
         if (name in s.fed) { say("$name is full! 🥕"); return }
-        if (s.crops.n(Crop.Carrot) <= 0) { say("No carrots! Grow some in the Greenhouse 🥕"); return }
+        if (s.crops.n(Crop.Carrot) <= 0) { say("No carrots! Grow some in the Greenhouse 🥕"); Audio.play(Sfx.Oops); return }
         if (!useEnergy(2)) return
         update { copy(fed = fed + name, crops = crops.add(Crop.Carrot, -1)) }
         say("$name munches happily! 🥕")
+        Audio.play(Sfx.Munch)
         checkReindeer()
     }
 
@@ -261,6 +271,7 @@ class GameState(private val prefs: SharedPreferences) {
         if (!useEnergy(2)) return
         update { copy(brushed = brushed + name) }
         say("$name looks so shiny! ✨")
+        Audio.play(Sfx.SleighBells)
         checkReindeer()
     }
 
@@ -278,6 +289,7 @@ class GameState(private val prefs: SharedPreferences) {
         if (!useEnergy(1)) return true
         update { copy(kidIndex = kidIndex + 1) }
         progress(JobKind.SortList)
+        Audio.play(if (kid.nice == nice) Sfx.Ding else Sfx.Oops)
         return kid.nice == nice
     }
 
@@ -289,8 +301,9 @@ class GameState(private val prefs: SharedPreferences) {
     fun deliver(): Boolean {
         if (christmasEveRide) return true
         val toy = s.toys.entries.firstOrNull { it.value > 0 }?.key
-        if (toy == null) { say("No presents left! Make toys in the Workshop 🧸"); return false }
+        if (toy == null) { say("No presents left! Make toys in the Workshop 🧸"); Audio.play(Sfx.Oops); return false }
         update { copy(toys = toys.add(toy, -1)) }
+        Audio.play(Sfx.PresentDrop)
         progress(JobKind.Deliver)
         return true
     }
@@ -301,7 +314,7 @@ class GameState(private val prefs: SharedPreferences) {
             job == null -> say("Deliveries start at Level 3! 🛷")
             job.finished -> say("All of today's presents are delivered! 🎉")
             !useEnergy(10) -> {}
-            else -> delivering = true
+            else -> { delivering = true; Audio.play(Sfx.SleighBells) }
         }
     }
 
@@ -309,6 +322,7 @@ class GameState(private val prefs: SharedPreferences) {
         overlay = Overlay.None
         christmasEveRide = true
         delivering = true
+        Audio.play(Sfx.SleighBells)
     }
 
     fun endDelivery(finishedChristmas: Boolean) {
@@ -325,8 +339,9 @@ class GameState(private val prefs: SharedPreferences) {
     // MARK: Shop
 
     private fun pay(price: Int): Boolean {
-        if (s.money < price) { say("Not enough money! 💸 Work for Santa to earn \$1,000 a day."); return false }
+        if (s.money < price) { say("Not enough money! 💸 Work for Santa to earn \$1,000 a day."); Audio.play(Sfx.Oops); return false }
         update { copy(money = money - price) }
+        Audio.play(Sfx.Coins)
         return true
     }
 
@@ -380,6 +395,7 @@ class GameState(private val prefs: SharedPreferences) {
         if (cookie == null) { say("You don't have any cookies! Bake some 🍪"); return }
         update { copy(cookies = cookies.add(cookie, -1), hearts = hearts.add(npc.name, 2).mapValues { it.value.coerceAtMost(5) }) }
         say("${npc.name} loves the ${cookie.title}! 💖")
+        Audio.play(Sfx.Ding)
         checkBestFriend(npc)
     }
 
@@ -396,6 +412,9 @@ class GameState(private val prefs: SharedPreferences) {
     }
 
     fun go(p: Place?) { place = p }
+
+    fun toggleMusic() { update { copy(musicOn = !musicOn) }; Audio.musicOn = s.musicOn }
+    fun toggleSound() { update { copy(soundOn = !soundOn) }; Audio.soundOn = s.soundOn; Audio.play(Sfx.Tap) }
 
     // MARK: Phone
 
@@ -415,6 +434,7 @@ class GameState(private val prefs: SharedPreferences) {
 
     fun post(thread: String, msgs: List<ChatMsg>) {
         if (msgs.isEmpty()) return
+        if (msgs.any { it.from != ME }) Audio.play(Sfx.Message)
         update { copy(chats = chats + (thread to (chats[thread].orEmpty() + msgs).takeLast(80))) }
     }
 

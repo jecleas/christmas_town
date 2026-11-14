@@ -96,7 +96,7 @@ fun Modifier.panel(color: Color = Pal.cream, border: Color = Pal.ink, radius: Dp
 
 @Composable
 fun Btn(color: Color, modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit, content: @Composable RowScope.() -> Unit) {
-    Box(modifier.squish(enabled, onClick)) {
+    Box(modifier.squish(enabled) { Audio.play(Sfx.Tap); onClick() }) {
         Box(Modifier.matchParentSize().offset(y = 4.dp).background(Pal.ink, RoundedCornerShape(10.dp)))
         Row(
             Modifier.fillMaxWidth().panel(color).padding(horizontal = 14.dp, vertical = 9.dp),
@@ -166,6 +166,19 @@ fun GameApp(game: GameState) {
     CompositionLocalProvider(LocalDensity provides Density(density.density, 1f)) {
         val creating = !game.s.hasElf || game.showCreator
         val bgPlace = if (creating) Place.Closet else game.place
+        val song = when {
+            game.overlay == Overlay.Won || game.overlay == Overlay.ChristmasEve -> Music.JoyToTheWorld
+            game.delivering -> if (game.christmasEveRide) Music.JoyToTheWorld else Music.SleighRide
+            creating -> Music.WeWish
+            else -> when (game.place) {
+                null -> Music.JingleBells
+                Place.Greenhouse, Place.Bakery, Place.Stable, Place.Workshop, Place.SantaList -> Music.DeckTheHalls
+                Place.Sleigh -> Music.SleighRide
+                Place.Shop, Place.Friends, Place.Phone, Place.Closet -> Music.WeWish
+                Place.Decorate, Place.Snacks -> Music.SilentNight
+            }
+        }
+        LaunchedEffect(song) { Audio.music(song) }
         Box(Modifier.fillMaxSize().background(backgroundFor(bgPlace))) {
             Snow(game.now, count = if (bgPlace in darkPlaces) 50 else 20)
             BoxWithConstraints(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {

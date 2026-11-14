@@ -254,7 +254,7 @@ fun WorkshopScreen(game: GameState) {
                     done = true
                     game.finishToy(toy)
                     scope.launch { delay(1300); done = false; step = 0 }
-                } else step++
+                } else { step++; Audio.play(Sfx.Pop) }
             }
         }
         Bob { ElfPx(game.s.look, 110.dp) }
