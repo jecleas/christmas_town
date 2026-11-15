@@ -146,6 +146,28 @@ val startingHouse = listOf(
     Placed(11, Item.Picture, 1, 0.22f, 0.12f), Placed(12, Item.Bookshelf, 1, 0.88f),
 )
 
+// MARK: - The house: two storeys to start, more floors as upgrades
+
+/** One floor of the house, bottom (0) to top. [price] is the upgrade cost (0 = you start with it). */
+class Room(val title: String, val emoji: String, val price: Int, val wall: Long, val stripe: Long)
+
+val rooms = listOf(
+    Room("Living Room", "🛋️", 0, 0xE3F0D8, 0xD3E6C4),
+    Room("Bedroom", "🛏️", 0, 0xF6D7E3, 0xEFC3D3),
+    Room("Attic Playroom", "🧸", 3000, 0xFFF1C9, 0xF6E2A6),
+    Room("Starlight Loft", "🔭", 6000, 0xD9D4F7, 0xC6BFF0),
+)
+const val START_FLOORS = 2
+
+/** Little things your pets get up to, by room. "%s" is the pet's name. */
+val petHappenings = listOf(
+    "%s is napping on the rug 💤", "%s is chasing a dust bunny 🐾", "%s found a sock! 🧦", "%s is staring out the window ❄️",
+    "%s is doing zoomies! 💨", "%s is playing with a ribbon 🎀", "%s is hiding under the bed 👀", "%s is guarding the presents 🎁",
+)
+val roomHappenings = listOf(
+    "The fire is crackling 🔥", "Someone left cookie crumbs on the pillow 🍪", "The toy train is going round and round 🚂", "The stars are twinkling through the telescope ✨",
+)
+
 // MARK: - Reindeer
 
 val reindeerNames = listOf("Dasher", "Dancer", "Prancer", "Vixen", "Comet", "Cupid", "Donner", "Blitzen", "Rudolph")
