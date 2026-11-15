@@ -721,8 +721,8 @@ private class Cloud(val x: Float, val y: Float, val w: Float, var bonked: Boolea
 fun DeliveryScreen(game: GameState) {
     val christmas = game.christmasEveRide
     val flight = remember { flightFor(game.level, christmas) }
-    val job = game.s.jobs.firstOrNull { it.kind == JobKind.Deliver }
-    val target = if (christmas) 8 else (job?.let { it.goal - it.done } ?: 0)
+    // Fixed when the ride starts (job.done goes up as you deliver, so don't recompute it).
+    val target = remember { if (christmas) 8 else (game.s.jobs.firstOrNull { it.kind == JobKind.Deliver }?.let { it.goal - it.done } ?: 0) }
     val team = remember { game.sleighTeam.sortedBy { if (it == "Rudolph") 0 else 1 }.reversed() }
     val power = game.teamPower
     val seed = remember { Random.nextInt(1000) }
