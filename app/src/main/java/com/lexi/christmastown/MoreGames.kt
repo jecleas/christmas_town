@@ -595,7 +595,7 @@ private fun SnowballGame(game: GameState, setPlaying: (Boolean) -> Unit) {
     var nextIncoming by remember { mutableFloatStateOf(3f) }
     var frame by remember { mutableIntStateOf(0) }
     val fortX = listOf(70f, 203f, 336f)
-    val fortY = 250f
+    val fortY = 320f
 
     LaunchedEffect(running) {
         if (!running) return@LaunchedEffect
@@ -604,7 +604,7 @@ private fun SnowballGame(game: GameState, setPlaying: (Boolean) -> Unit) {
             withFrameMillis { now ->
                 t = (now - start) / 1000f
                 for ((i, p) in pops.withIndex()) if (t > p.downAt + 0.4f + i * 0.3f && Random.nextFloat() < 0.02f) { p.upAt = t; p.downAt = t + 1.1f + Random.nextFloat() * 0.9f - (t / ROUND_SECONDS) * 0.4f }
-                if (t > nextIncoming) { incoming.add(Incoming(60f + Random.nextFloat() * 280f, 120f + Random.nextFloat() * 300f, t)); nextIncoming = t + 2.2f + Random.nextFloat() * 1.5f }
+                if (t > nextIncoming) { incoming.add(Incoming(60f + Random.nextFloat() * 280f, 100f + Random.nextFloat() * 320f, t)); nextIncoming = t + 2.2f + Random.nextFloat() * 1.5f }
                 incoming.removeAll { if (t - it.born > 1.5f) { splatUntil = t + 1.0f; Audio.play(Sfx.Oops); true } else false }
                 throws.removeAll { th ->
                     if (t - th.born > 0.28f) {
@@ -645,8 +645,9 @@ private fun SnowballGame(game: GameState, setPlaying: (Boolean) -> Unit) {
             Canvas(Modifier.fillMaxSize()) {
                 val u = density
                 drawRect(Brush.verticalGradient(listOf(hex(0xBFE3F7), hex(0xEAF6FF))))
-                drawRect(Color.White, Offset(0f, 200 * u), Size(size.width, size.height))
-                for (i in 0 until 6) drawCircle(hex(0xDDEBF5), (40 + i * 7) * u, Offset((i * 83f) * u, 205 * u))
+                for (i in 0 until 6) drawCircle(hex(0xDDEBF5), (50 + i * 7) * u, Offset((i * 83f) * u, 275 * u))
+                drawRect(Color.White, Offset(0f, 270 * u), Size(size.width, size.height))
+                for (i in 0 until 14) drawRect(hex(0xDDEBF5), Offset(((i * 61) % 400) * u, (290 + (i * 37) % 170) * u), Size(18 * u, 3 * u))
             }
             // friends popping up behind forts
             for ((i, f) in friends.value.withIndex()) {
@@ -661,8 +662,9 @@ private fun SnowballGame(game: GameState, setPlaying: (Boolean) -> Unit) {
                 val u = density
                 for (x in fortX) {
                     drawRoundRect(Pal.ink, Offset((x - 62) * u, (fortY + 10) * u), Size(124 * u, 64 * u), CornerRadius(26 * u))
-                    drawRoundRect(Color.White, Offset((x - 59) * u, (fortY + 13) * u), Size(118 * u, 58 * u), CornerRadius(24 * u))
-                    drawRoundRect(hex(0xDDEBF5), Offset((x - 59) * u, (fortY + 50) * u), Size(118 * u, 21 * u), CornerRadius(10 * u))
+                    drawRoundRect(hex(0xEAF4FB), Offset((x - 59) * u, (fortY + 13) * u), Size(118 * u, 58 * u), CornerRadius(24 * u))
+                    drawRoundRect(hex(0xC6DDF0), Offset((x - 59) * u, (fortY + 46) * u), Size(118 * u, 25 * u), CornerRadius(10 * u))
+                    for (k in 0..2) drawCircle(hex(0xC6DDF0), 9 * u, Offset((x - 34 + k * 34) * u, (fortY + 26) * u))
                 }
                 // your snowballs flying from the bottom
                 for (th in throws) {
@@ -852,7 +854,8 @@ fun DeliveryScreen(game: GameState) {
                     val lead = team.lastOrNull()
                     val nose = Offset((SLEIGH_X + 104 + (team.size - 1) * 40 + 38) * u, sy + 9 * u)
                     val glow = if (lead == "Rudolph" || "Rudolph" in game.reindeer) 1f else 0.6f
-                    drawRect(Brush.radialGradient(listOf(Color.Transparent, Color.Transparent, hex(0x0E1633).copy(alpha = 0.82f)), nose, 260 * u * glow), Offset.Zero, size)
+                    // a soft beam from the nose down to the rooftops, so you can still aim at chimneys
+                    drawRect(Brush.radialGradient(listOf(Color.Transparent, Color.Transparent, hex(0x0E1633).copy(alpha = 0.6f)), nose + Offset(60 * u, 140 * u), 420 * u * glow), Offset.Zero, size)
                     if ("Rudolph" in team) drawCircle(Brush.radialGradient(listOf(hex(0xFF4050).copy(alpha = 0.55f), Color.Transparent), nose, 40 * u), 40 * u, nose)
                 }
             }

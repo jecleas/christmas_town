@@ -75,11 +75,11 @@ private fun ReindeerTile(game: GameState, name: String, onOpen: () -> Unit) {
             Bob(if (fed && brushed) 5f else 2f, if (fed && brushed) 400 else 900) { ReindeerPx(name, game.decosOn(name), 62.dp) }
         }
         Txt(name, 15, maxLines = 1)
-        Txt((if (fed) "🥕" else "▫️") + (if (brushed) "🪮" else "▫️") + (if (washed) "🫧" else "▫️") + (if (name in game.sleighTeam) "🛷" else ""), 12)
+        Txt((if (fed) "🥕" else "▫️") + (if (brushed) "✨" else "▫️") + (if (washed) "🛁" else "▫️") + (if (name in game.sleighTeam) "🛷" else ""), 12)
     }
 }
 
-private enum class CareTool(val label: String) { Feed("🥕 Feed"), Brush("🪮 Brush"), Wash("🫧 Wash"), Decorate("🎀 Dress up"), Sleigh("🛷 Sleigh") }
+private enum class CareTool(val label: String) { Feed("🥕 Feed"), Brush("✨ Brush"), Wash("🛁 Wash"), Decorate("🎀 Dress up"), Sleigh("🛷 Sleigh") }
 private enum class WashStep { Idle, Scrub, Rinse }
 
 private const val RUB_DISTANCE = 450f   // how far (dp) you rub to finish brushing
@@ -132,7 +132,7 @@ private fun ReindeerCare(game: GameState, name: String, onBack: () -> Unit) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Btn("🦌 All", Pal.brown, 15, Modifier.width(96.dp), onClick = onBack)
             Txt(if (name == "Rudolph") "$name 🔴" else name, 26, Color.White, modifier = Modifier.weight(1f))
-            Txt((if (fed) "🥕✅" else "🥕") + (if (brushed) " 🪮✅" else " 🪮") + (if (washed) " 🫧✅" else " 🫧"), 14, Color.White)
+            Txt((if (fed) "🥕✅" else "🥕") + (if (brushed) " ✨✅" else " ✨") + (if (washed) " 🛁✅" else " 🛁"), 14, Color.White)
         }
 
         // The stall with the big reindeer
@@ -199,7 +199,7 @@ private fun ReindeerCare(game: GameState, name: String, onBack: () -> Unit) {
                     Bar(rubbed / RUB_DISTANCE, hex(0xFFCC4D))
                 }
                 CareTool.Wash -> when {
-                    washed -> Txt("$name is squeaky clean! 🫧✅", 17, Pal.darkGreen)
+                    washed -> Txt("$name is squeaky clean! 🛁✅", 17, Pal.darkGreen)
                     wash == WashStep.Idle -> {
                         Txt("A bubble bath makes reindeer extra happy!", 15, align = TextAlign.Center)
                         Btn("🧽 Start the bath (⚡2)", Pal.blue, 17, Modifier.width(260.dp)) { if (game.hasEnergy(2)) { bubbles.clear(); wash = WashStep.Scrub; say = "Scrub scrub! Rub to make bubbles 🧽" } }

@@ -368,7 +368,7 @@ class GameState(private val prefs: SharedPreferences) {
         if (name in s.washed) return
         if (!useEnergy(2)) return
         update { copy(washed = washed + name) }
-        say("$name is squeaky clean! 🫧")
+        say("$name is squeaky clean! 🛁")
         Audio.play(Sfx.Ding)
     }
 
