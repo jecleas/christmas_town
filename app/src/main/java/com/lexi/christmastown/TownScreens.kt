@@ -43,7 +43,7 @@ fun FriendsScreen(game: GameState) {
 
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Txt("Tap an elf to talk to them!", 18, Color.White)
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             for (npc in npcs) {
                 val sel = npc == talking
                 Column(

@@ -83,6 +83,8 @@ object ChatFilter {
             "Pepper" -> "Ooh, let's use kind words, sweetie. 💖 Kind words are like warm cookies!"
             "Sprout" -> "Um... that's not very kind. 🥺 Let's be nice to each other, okay?"
             "Twinkle" -> "Nooo, mean words aren't sparkly! ✨ Let's use kind ones!"
+            "Holly" -> "Hmm, my kindness-o-meter just beeped 📟 Let's try nicer words!"
+            "Frost" -> "Brrr, that was a chilly thing to say! 🥶 Let's keep it warm and kind."
             else -> "Whoa, let's use kind words in Christmas Town! 💖"
         }
         Flag.Ok -> ""
@@ -105,6 +107,14 @@ private val dmQuestions = mapOf(
     "Pepper" to listOf(
         Question("p_cookie", "What's your favorite cookie? 🍪", listOf("Sugar", "Berry", "Choc chip"), "favCookie") { "Ooh, $it cookies! I'll bake an extra batch just for you, sweetie 💕" },
         Question("p_drink", "Hot cocoa or warm milk? ☕", listOf("Hot cocoa", "Warm milk")) { "$it it is! With a cinnamon sprinkle on top 😋" },
+    ),
+    "Holly" to listOf(
+        Question("h_invent", "If I built you a robot helper, what should it do? 🤖", listOf("Make cookies", "Walk my pet", "Wrap presents")) { "A robot that can $it? Drawing the plans RIGHT NOW! 📐" },
+        Question("h_power", "Which superpower would you pick? ⚡", listOf("Flying", "Invisibility", "Talking to animals")) { "$it! I'll try to invent it. No promises! 🔬" },
+    ),
+    "Frost" to listOf(
+        Question("f_joke", "Want to hear a joke or tell me one? 😆", listOf("Tell me one!", "I'll tell you!")) { if ("me" in it) "What's a snowman's favorite snack? ICE crispy treats! ❄️😂" else "Ooh, go go go! I'm ready to laugh! 😆" },
+        Question("f_build", "What should I sculpt out of snow next? ⛄", listOf("A dragon", "Santa", "A giant cookie")) { "$it made of snow?! That's going to be EPIC. ❄️" },
     ),
     "Sprout" to listOf(
         Question("s_deer", "Which reindeer do you like best? 🦌", listOf("Dasher", "Comet", "Rudolph"), "favReindeer") { "$it is really sweet. 🥰 I'll tell them you said hi." },
@@ -197,6 +207,8 @@ object ElfBrain {
         "Twinkle" -> pick(" ✨", " 💖✨", " 🎉", " OMG!")
         "Pepper" -> pick(" 🍪", " 💕", " sweetie!", "")
         "Sprout" -> pick(" 🌱", " 🦌", " 🥰", "")
+        "Holly" -> pick(" 🔬", " Eureka!", " 🤖", "")
+        "Frost" -> pick(" ❄️", " 😆", " ⛄", " Brrr!")
         else -> ""
     }
 
@@ -224,12 +236,16 @@ object ElfBrain {
                 "Jingle" -> "Hey hey, $name! 🔧 Ready to build some toys?"
                 "Twinkle" -> "HIIII $name!! ✨💖 I was JUST thinking about you!"
                 "Pepper" -> "Hello, sweetie! 🍪 " + (mem(game, "favCookie")?.let { "Still loving $it cookies?" } ?: "Want a warm cookie?")
+                "Holly" -> "Greetings, $name! 🔬 I just finished inventing... a better spoon."
+                "Frost" -> "Yo yo, $name! ❄️ Why are you so cool? Oh wait, that's me. 😎"
                 else -> "Oh! Hi $name 👋 " + (mem(game, "favReindeer")?.let { "$it says hi too! 🦌" } ?: "The reindeer say hi! 🦌")
             }
             has(t, "how are you", "how r u", "hru", "how's it going", "hows it going", "how are u", "you ok", "u ok") -> when (elf) {
                 "Jingle" -> "SUPER good! I just made a teddy bear with button eyes! 🧸 How are YOU?"
                 "Twinkle" -> "Amazing!!! I'm planning a surprise party ✨ (shh!) How are you?"
                 "Pepper" -> "Warm and toasty, thank you! 🍪 My oven smells like cinnamon. How are you, dear?"
+                "Holly" -> "Excellent! Only one small explosion today 💥 (it was glitter). How are you?"
+                "Frost" -> "Ice to see you! 🧊 Get it? I'm great! How are you?"
                 else -> "Pretty good! Comet licked my face this morning 🦌😊 How are you?"
             }
             has(t, "sad", "upset", "cry", "crying", "lonely", "bad day", "mad", "angry", "scared", "worried", "tired") ->
@@ -240,9 +256,9 @@ object ElfBrain {
             has(t, "are you real", "are you a robot", "are you ai", "are you a bot", "are you human", "is this real") ->
                 "I'm $elf, an elf in Christmas Town! 🧝 I'm a character in this game, so I live inside your phone. But our friendship is real fun! 💖"
             has(t, "your name", "who are you", "what's your name", "whats your name") ->
-                "I'm $elf! " + when (elf) { "Jingle" -> "Toy maker extraordinaire 🔧🧸"; "Twinkle" -> "Party planner and glitter expert ✨🎉"; "Pepper" -> "Head baker of Christmas Town 🍪"; else -> "I look after Santa's reindeer 🦌" }
+                "I'm $elf! " + when (elf) { "Jingle" -> "Toy maker extraordinaire 🔧🧸"; "Twinkle" -> "Party planner and glitter expert ✨🎉"; "Pepper" -> "Head baker of Christmas Town 🍪"; "Holly" -> "Inventor of mostly-working gadgets 🔬"; "Frost" -> "Snow sculptor and joke champion ❄️😆"; else -> "I look after Santa's reindeer 🦌" }
             has(t, "what do you do", "your job", "what's your job", "whats your job") ->
-                when (elf) { "Jingle" -> "I make toys! Trains, robots, teddy bears... ALL the toys! 🔧"; "Twinkle" -> "I plan the BEST parties in the North Pole ✨🎉"; "Pepper" -> "I bake cookies for Santa and everyone! 🍪"; else -> "I feed and brush the reindeer. They're my best friends 🦌🥕" }
+                when (elf) { "Jingle" -> "I make toys! Trains, robots, teddy bears... ALL the toys! 🔧"; "Twinkle" -> "I plan the BEST parties in the North Pole ✨🎉"; "Pepper" -> "I bake cookies for Santa and everyone! 🍪"; "Holly" -> "I invent things! Toy machines, snow cannons, self-stirring bowls... 🔬"; "Frost" -> "I make snow sculptures and tell the BEST jokes ⛄😆"; else -> "I feed and brush the reindeer. They're my best friends 🦌🥕" }
             has(t, "money", "paid", "pay", "rich", "coins", "dollars") ->
                 if (s.paidToday) "You already got your ${money(PAY)} today! 💰 Spend it on something fun in the Shop!"
                 else "Santa pays ${money(PAY)} when you finish ALL your jobs. You have ${jobsLeft.size} left today! 📋"
@@ -272,6 +288,8 @@ object ElfBrain {
                 "Jingle" -> "My favorite thing? Robots! 🤖 They beep!"
                 "Twinkle" -> "Glitter. Obviously. ✨✨✨"
                 "Pepper" -> "Warm cookies straight from the oven 🍪 nothing better!"
+                "Holly" -> "Gears! Springs! Anything that goes BOING! 🔩"
+                "Frost" -> "Snow days. And puns. Snow-puns are the best. ❄️"
                 else -> "Reindeer. All of them. Even the grumpy ones 🦌💕"
             }
             has(t, "love you", "you're cool", "youre cool", "you are cool", "you're nice", "you're awesome", "you're funny", "best friend", "like you") ->

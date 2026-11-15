@@ -70,7 +70,44 @@ sealed interface Overlay {
     // Settings
     val musicOn: Boolean = true,
     val soundOn: Boolean = true,
+    // Expansion (all with defaults so older saves still load)
+    val wrapped: Int = 0,
+    val townTree: List<Ornament> = emptyList(),
+    val snowballDay: Int = 0,
+    val gingerHouses: Int = 0,
+    val pets: List<Pet> = emptyList(),
+    val washed: Set<String> = emptySet(),
+    val decos: Set<Deco> = emptySet(),
+    val reindeerDecos: Map<String, Set<Deco>> = emptyMap(),
+    val team: List<String> = emptyList(),
+    val adventYear: Int = 0,
+    val adventOpened: Set<Int> = emptySet(),
+    val stickers: Set<String> = emptySet(),
+    val stickersSeen: Int = 0,
+    val prizesClaimed: Set<Int> = emptySet(),
 )
+
+/** Stickers you've earned just by what's in your save (things you own, pets, friends...). */
+fun Save.withStickers(): Save {
+    val earned = buildSet {
+        cookies.filter { it.value > 0 }.keys.forEach { add("cookie:${it.name}") }
+        toys.filter { it.value > 0 }.keys.forEach { add("toy:${it.name}") }
+        (fed intersect brushed intersect washed).forEach { add("deer:$it") }
+        pets.forEach { add("pet:${it.kind.name}") }
+        owned.filter { it.value > 0 }.keys.forEach { add("item:${it.name}") }
+        if (wrapped > 0) add("wrap")
+        if (gingerHouses > 0) add("ginger")
+        if (townTree.isNotEmpty()) add("tree")
+        if (bestGifts.isNotEmpty()) add("friend")
+        if (levelFor(workdays) >= MAX_LEVEL) add("level8")
+        if (christmasDone) add("christmas")
+        if (adventOpened.isNotEmpty()) add("advent")
+    }
+    return if (stickers.containsAll(earned)) this else copy(stickers = stickers + earned)
+}
+
+/** One ornament hung on the Town Tree (x/y are fractions of the tree picture). */
+@Serializable data class Ornament(val kind: Int, val color: Int, val x: Float, val y: Float)
 
 fun <K> Map<K, Int>.n(k: K) = this[k] ?: 0
 fun <K> Map<K, Int>.add(k: K, d: Int) = this + (k to (n(k) + d))
@@ -92,6 +129,8 @@ class GameState(private val prefs: SharedPreferences) {
     var christmasEveRide by mutableStateOf(false)
     var selectedSeed by mutableStateOf(Crop.Wheat)
     var now by mutableLongStateOf(System.currentTimeMillis())
+    /** A mini-game can ask for its own song while it's on screen. */
+    var gameSong by mutableStateOf<Music?>(null)
     private var toastUntil = 0L
 
     val level get() = levelFor(s.workdays)
@@ -101,13 +140,13 @@ class GameState(private val prefs: SharedPreferences) {
     val jobsDone get() = s.jobs.count { it.finished }
 
     private fun update(change: Save.() -> Save) {
-        s = s.change()
+        s = s.change().withStickers()
         prefs.edit().putString("save", json.encodeToString(s)).apply()
     }
 
-    private fun load(): Save = prefs.getString("save", null)?.let {
+    private fun load(): Save = (prefs.getString("save", null)?.let {
         runCatching { json.decodeFromString<Save>(it) }.getOrNull()
-    } ?: Save()
+    } ?: Save()).withStickers()
 
     fun tick() {
         now = System.currentTimeMillis()
@@ -130,6 +169,9 @@ class GameState(private val prefs: SharedPreferences) {
         update { copy(energy = energy - amount) }
         return true
     }
+
+    /** Uses energy for a mini-game (shows "too tired" if you can't). */
+    fun spend(amount: Int): Boolean = useEnergy(amount)
 
     /** Checks (without using) energy, so mini-games can start only if you can finish them. */
     fun hasEnergy(amount: Int): Boolean {
@@ -178,7 +220,8 @@ class GameState(private val prefs: SharedPreferences) {
         update {
             copy(
                 day = day + 1, energy = 100, paidToday = false, fed = emptySet(), brushed = emptySet(),
-                talkedToday = emptySet(), jobs = jobsFor(levelFor(workdays)), kids = makeKids(5), kidIndex = 0,
+                talkedToday = emptySet(), jobs = jobsFor(levelFor(workdays)), kids = makeKids(listOf(5, 5, 5, 5, 5, 5, 6, 6)[levelFor(workdays) - 1]), kidIndex = 0,
+                washed = emptySet(),
             )
         }
         overlay = Overlay.Morning(s.day, worked)
@@ -303,14 +346,15 @@ class GameState(private val prefs: SharedPreferences) {
 
     // MARK: Delivery
 
-    val presents get() = s.toys.values.sum()
+    val presents get() = s.toys.values.sum() + s.wrapped
 
-    /** Uses one toy (or one of Santa's on Christmas Eve). */
+    /** Uses one present: a wrapped one first, then a plain toy (or one of Santa's on Christmas Eve). */
     fun deliver(): Boolean {
-        if (christmasEveRide) return true
+        if (christmasEveRide) { Audio.play(Sfx.PresentDrop); return true }
         val toy = s.toys.entries.firstOrNull { it.value > 0 }?.key
-        if (toy == null) { say("No presents left! Make toys in the Workshop 🧸"); Audio.play(Sfx.Oops); return false }
-        update { copy(toys = toys.add(toy, -1)) }
+        if (s.wrapped > 0) update { copy(wrapped = wrapped - 1) }
+        else if (toy != null) update { copy(toys = toys.add(toy, -1)) }
+        else { say("No presents left! Make toys in the Workshop 🧸"); Audio.play(Sfx.Oops); return false }
         Audio.play(Sfx.PresentDrop)
         progress(JobKind.Deliver)
         return true
@@ -342,6 +386,155 @@ class GameState(private val prefs: SharedPreferences) {
                 overlay = Overlay.Won
             }
         }
+    }
+
+    // MARK: Reindeer care (wash, decorate, harness)
+
+    fun wash(name: String) {
+        if (name in s.washed) return
+        if (!useEnergy(2)) return
+        update { copy(washed = washed + name) }
+        say("$name is squeaky clean! 🛁")
+        Audio.play(Sfx.Ding)
+    }
+
+    fun decosOn(name: String) = s.reindeerDecos[name].orEmpty()
+
+    fun buyDeco(d: Deco) {
+        if (d in s.decos) return
+        if (pay(d.price)) { update { copy(decos = decos + d) }; say("You got ${d.title}! ${d.emoji} Tap it to put it on a reindeer.") }
+    }
+
+    fun toggleDeco(name: String, d: Deco) {
+        if (d !in s.decos) { buyDeco(d); if (d !in s.decos) return }
+        val on = decosOn(name)
+        update { copy(reindeerDecos = reindeerDecos + (name to (if (d in on) on - d else on + d))) }
+        Audio.play(Sfx.SleighBells)
+    }
+
+    /** The reindeer pulling the sleigh (up to [TEAM_SIZE]). If you never picked, the first ones go. */
+    val sleighTeam get() = s.team.filter { it in reindeer }.ifEmpty { reindeer.take(TEAM_SIZE) }
+
+    fun toggleTeam(name: String) {
+        val t = s.team.filter { it in reindeer }
+        when {
+            name in t -> update { copy(team = t - name) }
+            t.size >= TEAM_SIZE -> { say("The sleigh only fits $TEAM_SIZE reindeer! Unhitch one first."); Audio.play(Sfx.Oops) }
+            else -> { update { copy(team = t + name) }; say("$name is hitched to the sleigh! 🛷"); Audio.play(Sfx.SleighBells) }
+        }
+    }
+
+    /** 0..TEAM_SIZE: how many sleigh reindeer are fed and brushed today. Happy reindeer steer better. */
+    val teamPower get() = sleighTeam.count { it in s.fed && it in s.brushed }
+
+    // MARK: Wrapping presents
+
+    fun startWrap(toy: Toy): Boolean {
+        if (s.toys.n(toy) <= 0) { say("You don't have a ${toy.title}! Make one in the Workshop 🧸"); Audio.play(Sfx.Oops); return false }
+        return hasEnergy(3)
+    }
+
+    fun finishWrap(toy: Toy) {
+        if (s.toys.n(toy) <= 0 || !useEnergy(3)) return
+        update { copy(toys = toys.add(toy, -1), wrapped = wrapped + 1) }
+        say("A beautiful present! 🎁 Wrapped presents go on the sleigh first.")
+        Audio.play(Sfx.Ding)
+        progress(JobKind.Wrap)
+    }
+
+    // MARK: Gingerbread house
+
+    val gingerRecipe = mapOf(Crop.Wheat to 3)
+    fun canBuildHouse() = gingerRecipe.all { (c, n) -> s.crops.n(c) >= n }
+
+    fun finishGingerHouse() {
+        if (!canBuildHouse() || !useEnergy(5)) return
+        update {
+            var cr = crops
+            gingerRecipe.forEach { (c, n) -> cr = cr.add(c, -n) }
+            copy(crops = cr, owned = owned.add(Item.GingerbreadHouse, 1), gingerHouses = gingerHouses + 1)
+        }
+        say("Your gingerbread house is in storage. Put it out at Home! 🏠")
+        Audio.play(Sfx.LevelUp)
+    }
+
+    // MARK: Town tree
+
+    fun finishTree(ornaments: List<Ornament>) {
+        update { copy(townTree = ornaments) }
+        say("The Town Tree looks AMAZING! 🎄✨")
+        Audio.play(Sfx.LevelUp)
+        progress(JobKind.Tree)
+    }
+
+    // MARK: Snowball fight
+
+    /** Friends you play with get a little closer (once a day). */
+    fun snowballDone(hits: Int, friends: List<Npc>) {
+        if (s.snowballDay != s.day && hits >= 3) {
+            update { copy(snowballDay = day, hearts = friends.fold(hearts) { h, f -> h.add(f.name, 1) }.mapValues { it.value.coerceAtMost(5) }) }
+            say("What a snowball fight! Your friends had a blast 💖")
+            friends.forEach { checkBestFriend(it) }
+        } else say(if (hits >= 3) "Snow much fun! ❄️" else "Brrr! Try again and hit 3 friends! ❄️")
+    }
+
+    // MARK: Pets
+
+    fun buyPet(kind: PetKind) {
+        if (pay(kind.price)) {
+            val name = (petNames - s.pets.map { it.name }.toSet()).randomOrNull() ?: petNames.random()
+            val id = (s.pets.maxOfOrNull { it.id } ?: 0) + 1
+            update { copy(pets = pets + Pet(id, kind, name, fedAt = System.currentTimeMillis(), washedAt = System.currentTimeMillis())) }
+            say("Meet $name the ${kind.title}! ${kind.noise} 💖")
+        }
+    }
+
+    private fun petCare(id: Long, change: Pet.(Long) -> Pet) {
+        val t = System.currentTimeMillis()
+        update { copy(pets = pets.map { if (it.id == id) it.change(t) else it }) }
+        val pet = s.pets.firstOrNull { it.id == id } ?: return
+        // Good care reward: a little gift once a day when every meter is high.
+        if (pet.fullness(t) > 0.8f && pet.cleanness(t) > 0.8f && pet.happiness(t) > 0.8f && pet.giftDay != s.day) {
+            val gift = listOf(Food.Candy, Food.HotCocoa, Food.Candy).random()
+            update { copy(pets = pets.map { if (it.id == id) it.copy(giftDay = day) else it }, food = food.add(gift, 1)) }
+            say("${pet.name} is SO happy, they found you a ${gift.title}! 🎁")
+            Audio.play(Sfx.Coins)
+        }
+    }
+
+    fun feedPet(id: Long) = petCare(id) { copy(fedAt = it) }
+    fun washPet(id: Long) = petCare(id) { copy(washedAt = it) }
+    fun cuddlePet(id: Long) = petCare(id) { copy(pettedAt = it) }
+
+    // MARK: Advent calendar
+
+    private val today get() = java.time.LocalDate.now()
+    /** Doors you may open: 1..today in December (none before Dec 1). Missed days can still be opened. */
+    val adventDay get() = if (today.monthValue == 12) today.dayOfMonth.coerceAtMost(24) else 0
+    val daysToAdvent get() = if (today.monthValue == 12) 0 else java.time.temporal.ChronoUnit.DAYS.between(today, java.time.LocalDate.of(today.year, 12, 1)).toInt()
+    val adventOpenedThisYear get() = if (s.adventYear == today.year) s.adventOpened else emptySet()
+
+    fun openAdvent(door: Int): Surprise? {
+        if (door > adventDay || door in adventOpenedThisYear) return null
+        val gift = adventSurprises[door - 1]
+        val year = today.year
+        update { gift.give(copy(adventYear = year, adventOpened = (if (adventYear == year) adventOpened else emptySet()) + door)) }
+        Audio.play(Sfx.LevelUp)
+        return gift
+    }
+
+    // MARK: Sticker book
+
+    fun sticker(id: String) { if (id !in s.stickers) update { copy(stickers = stickers + id) } }
+    val newStickers get() = (s.stickers.size - s.stickersSeen).coerceAtLeast(0)
+    fun sawStickers() { if (s.stickersSeen != s.stickers.size) update { copy(stickersSeen = stickers.size) } }
+
+    fun claimPrize(at: Int) {
+        val prize = stickerPrizes.firstOrNull { it.first == at } ?: return
+        if (s.stickers.size < at || at in s.prizesClaimed) return
+        update { prize.second.give(copy(prizesClaimed = prizesClaimed + at)) }
+        say("Sticker prize: ${prize.second.title}! 🎁")
+        Audio.play(Sfx.LevelUp)
     }
 
     // MARK: Shop
