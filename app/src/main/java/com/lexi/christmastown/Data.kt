@@ -342,9 +342,57 @@ fun Pet.happiness(now: Long) = (meter(pettedAt, now, 6f) * 0.5f + fullness(now) 
 
 val petNames = listOf("Pip", "Biscuit", "Snowball", "Mochi", "Waffles", "Noodle", "Pickle", "Sprinkles", "Muffin", "Ziggy", "Bean", "Tinsel")
 
+// MARK: - Advent calendar (1–24 December, real dates)
+
+/** A surprise behind an advent door. [give] adds it to your save. */
+class Surprise(val title: String, val sprite: String, val give: (Save) -> Save)
+
+private fun item(i: Item) = Surprise(i.title, i.sprite) { it.copy(owned = it.owned.add(i, 1)) }
+private fun food(f: Food, n: Int = 1) = Surprise(if (n > 1) "$n ${f.title}" else f.title, f.sprite) { it.copy(food = it.food.add(f, n)) }
+private fun seeds(c: Crop, n: Int) = Surprise("$n ${c.title} seeds", c.sprite) { it.copy(seeds = it.seeds.add(c, n)) }
+private fun hat(h: Hat) = Surprise(h.title, "gift") { it.copy(hats = it.hats + h) }
+private fun outfit(o: Outfit) = Surprise(o.title, "gift") { it.copy(outfits = it.outfits + o) }
+
+/** Door 1..24. Day 24 is the best one. */
+val adventSurprises: List<Surprise> = listOf(
+    food(Food.Candy, 2), item(Item.Stocking), food(Food.HotCocoa), item(Item.Wreath), seeds(Crop.Wheat, 6), item(Item.Candles),
+    item(Item.Poinsettia), food(Food.Pie), hat(Hat.Earmuffs), item(Item.Garland), item(Item.Nutcracker), seeds(Crop.Carrot, 6),
+    item(Item.Snowman), item(Item.Sled), outfit(Outfit.Pajamas), item(Item.Presents), seeds(Crop.Ginger, 3), item(Item.RockingChair),
+    food(Food.HotCocoa, 2), item(Item.ToyChest), hat(Hat.TopHat), item(Item.GingerbreadHouse), outfit(Outfit.Snowsuit), hat(Hat.Crown),
+)
+
+/** Where each day's door sits in the 4 × 6 grid (mixed up, like a real calendar). */
+val adventOrder = listOf(13, 2, 20, 7, 17, 10, 4, 24, 15, 1, 9, 22, 6, 19, 12, 3, 23, 8, 16, 11, 21, 5, 18, 14)
+
+// MARK: - Sticker book: one sticker for everything you collect or do
+
+class Sticker(val id: String, val title: String, val sprite: String)
+
+val stickers: List<Sticker> = buildList {
+    Cookie.entries.forEach { add(Sticker("cookie:${it.name}", "Baked a ${it.title}", it.sprite)) }
+    Toy.entries.forEach { add(Sticker("toy:${it.name}", "Made a ${it.title}", it.sprite)) }
+    reindeerNames.forEach { add(Sticker("deer:$it", "Pampered $it (fed, brushed & washed)", "reindeer")) }
+    PetKind.entries.forEach { add(Sticker("pet:${it.name}", "Adopted a ${it.title}", it.sprite)) }
+    Item.entries.forEach { add(Sticker("item:${it.name}", "Owned a ${it.title}", it.sprite)) }
+    add(Sticker("wrap", "Wrapped a present", "gift"))
+    add(Sticker("ginger", "Built a gingerbread house", "ginghouse"))
+    add(Sticker("tree", "Decorated the Town Tree", "tree"))
+    add(Sticker("snowball", "Snowball champion (10 hits)", "snowman"))
+    add(Sticker("flight", "Finished a sleigh flight", "sleigh"))
+    add(Sticker("friend", "Made a best friend", "candy"))
+    add(Sticker("level8", "Became Santa's Best Elf", "santa"))
+    add(Sticker("christmas", "Saved Christmas!", "presents"))
+    add(Sticker("advent", "Opened an advent door", "candycane"))
+}
+
+/** Sticker milestones and their prizes. */
+val stickerPrizes: List<Pair<Int, Surprise>> = listOf(
+    10 to item(Item.Presents), 25 to hat(Hat.TopHat), 40 to item(Item.ToyChest), 60 to hat(Hat.Crown),
+)
+
 // MARK: - Activities (the icons on the main screen)
 
-enum class Side { Left, Right }
+enum class Side { Left, Right, Hidden }   // Hidden places open from the buttons at the bottom of the main screen
 
 /** Each icon on the main screen. [sprite] is its pixel-art picture ("" = drawn specially). */
 enum class Place(val title: String, val sprite: String, val side: Side, val color: Color) {
@@ -362,4 +410,6 @@ enum class Place(val title: String, val sprite: String, val side: Side, val colo
     Phone("Phone", "phone", Side.Right, hex(0x3D6FD6)),
     Snacks("Snacks", "cocoa_mug", Side.Right, hex(0xC98B5E)),
     Pets("Pets", "pet_penguin", Side.Right, hex(0xF2A93B)),
+    Advent("Advent Calendar", "gift", Side.Hidden, hex(0xA02338)),
+    Stickers("Sticker Book", "teddy", Side.Hidden, hex(0x9B6BE0)),
 }

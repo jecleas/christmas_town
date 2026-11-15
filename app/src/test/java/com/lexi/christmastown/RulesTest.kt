@@ -61,4 +61,23 @@ class RulesTest {
         val again = json.decodeFromString<Save>(json.encodeToString(s.copy(pets = listOf(Pet(1, PetKind.Penguin, "Pip")), decos = setOf(Deco.Scarf))))
         assertEquals("Pip", again.pets.single().name)
     }
+
+    @Test fun adventHas24DoorsInAMixedUpGrid() {
+        assertEquals(24, adventSurprises.size)
+        assertEquals((1..24).toSet(), adventOrder.toSet())
+        assertEquals(24, adventOrder.size)
+    }
+
+    @Test fun adventGiftsAreNeverMoney() {
+        val before = Save()
+        for (g in adventSurprises) assertEquals(before.money, g.give(before).money)
+        for ((_, p) in stickerPrizes) assertEquals(before.money, p.give(before).money)
+    }
+
+    @Test fun stickersAreUniqueAndEarnedFromTheSave() {
+        assertEquals(stickers.size, stickers.map { it.id }.toSet().size)
+        val s = Save(pets = listOf(Pet(1, PetKind.Owl, "Hoot")), wrapped = 1).withStickers()
+        assertTrue("pet:Owl" in s.stickers && "wrap" in s.stickers && "item:Tree" in s.stickers)
+        assertTrue(stickerPrizes.all { it.first <= stickers.size })
+    }
 }

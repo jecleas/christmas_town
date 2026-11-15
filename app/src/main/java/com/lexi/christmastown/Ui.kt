@@ -150,9 +150,11 @@ fun backgroundFor(p: Place?): Brush = when (p) {
     Place.Shop -> Brush.verticalGradient(listOf(hex(0xE6DAFF), hex(0xC6B1F2)))
     Place.Park -> Brush.verticalGradient(listOf(hex(0x2C4F8C), hex(0x9BC8EE)))
     Place.Pets -> Brush.verticalGradient(listOf(hex(0xFFE3B0), hex(0xF7C27A)))
+    Place.Advent -> Brush.verticalGradient(listOf(hex(0x1D2B53), hex(0x7A1E2E)))
+    Place.Stickers -> Brush.verticalGradient(listOf(hex(0x5B3A8C), hex(0x9B6BE0)))
 }
 
-private val darkPlaces = setOf(null, Place.Decorate, Place.Snacks, Place.Phone, Place.Stable, Place.SantaList, Place.Sleigh, Place.Friends, Place.Closet, Place.Park)
+private val darkPlaces = setOf(null, Place.Decorate, Place.Snacks, Place.Phone, Place.Stable, Place.SantaList, Place.Sleigh, Place.Friends, Place.Closet, Place.Park, Place.Advent, Place.Stickers)
 fun textOn(p: Place?) = if (p in darkPlaces) Color.White else Pal.ink
 
 // MARK: - The whole app
@@ -181,6 +183,8 @@ fun GameApp(game: GameState) {
                 Place.Decorate, Place.Snacks -> Music.SilentNight
                 Place.Park -> Music.OChristmasTree
                 Place.Pets -> Music.JollyOldStNicholas
+                Place.Advent -> Music.SilentNight
+                Place.Stickers -> Music.JingleBells
             }
         }
         LaunchedEffect(song) { Audio.music(song) }
@@ -227,6 +231,8 @@ private fun PlaceScreen(game: GameState, p: Place) = when (p) {
     Place.Snacks -> SnacksScreen(game)
     Place.Park -> ParkScreen(game)
     Place.Pets -> PetsScreen(game)
+    Place.Advent -> AdventScreen(game)
+    Place.Stickers -> StickerScreen(game)
 }
 
 /** A full-screen activity: big Back button, title, money and energy, then the content. */

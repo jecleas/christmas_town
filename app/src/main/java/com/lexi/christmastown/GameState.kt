@@ -80,7 +80,31 @@ sealed interface Overlay {
     val decos: Set<Deco> = emptySet(),
     val reindeerDecos: Map<String, Set<Deco>> = emptyMap(),
     val team: List<String> = emptyList(),
+    val adventYear: Int = 0,
+    val adventOpened: Set<Int> = emptySet(),
+    val stickers: Set<String> = emptySet(),
+    val stickersSeen: Int = 0,
+    val prizesClaimed: Set<Int> = emptySet(),
 )
+
+/** Stickers you've earned just by what's in your save (things you own, pets, friends...). */
+fun Save.withStickers(): Save {
+    val earned = buildSet {
+        cookies.filter { it.value > 0 }.keys.forEach { add("cookie:${it.name}") }
+        toys.filter { it.value > 0 }.keys.forEach { add("toy:${it.name}") }
+        (fed intersect brushed intersect washed).forEach { add("deer:$it") }
+        pets.forEach { add("pet:${it.kind.name}") }
+        owned.filter { it.value > 0 }.keys.forEach { add("item:${it.name}") }
+        if (wrapped > 0) add("wrap")
+        if (gingerHouses > 0) add("ginger")
+        if (townTree.isNotEmpty()) add("tree")
+        if (bestGifts.isNotEmpty()) add("friend")
+        if (levelFor(workdays) >= MAX_LEVEL) add("level8")
+        if (christmasDone) add("christmas")
+        if (adventOpened.isNotEmpty()) add("advent")
+    }
+    return if (stickers.containsAll(earned)) this else copy(stickers = stickers + earned)
+}
 
 /** One ornament hung on the Town Tree (x/y are fractions of the tree picture). */
 @Serializable data class Ornament(val kind: Int, val color: Int, val x: Float, val y: Float)
@@ -116,13 +140,13 @@ class GameState(private val prefs: SharedPreferences) {
     val jobsDone get() = s.jobs.count { it.finished }
 
     private fun update(change: Save.() -> Save) {
-        s = s.change()
+        s = s.change().withStickers()
         prefs.edit().putString("save", json.encodeToString(s)).apply()
     }
 
-    private fun load(): Save = prefs.getString("save", null)?.let {
+    private fun load(): Save = (prefs.getString("save", null)?.let {
         runCatching { json.decodeFromString<Save>(it) }.getOrNull()
-    } ?: Save()
+    } ?: Save()).withStickers()
 
     fun tick() {
         now = System.currentTimeMillis()
@@ -481,6 +505,37 @@ class GameState(private val prefs: SharedPreferences) {
     fun feedPet(id: Long) = petCare(id) { copy(fedAt = it) }
     fun washPet(id: Long) = petCare(id) { copy(washedAt = it) }
     fun cuddlePet(id: Long) = petCare(id) { copy(pettedAt = it) }
+
+    // MARK: Advent calendar
+
+    private val today get() = java.time.LocalDate.now()
+    /** Doors you may open: 1..today in December (none before Dec 1). Missed days can still be opened. */
+    val adventDay get() = if (today.monthValue == 12) today.dayOfMonth.coerceAtMost(24) else 0
+    val daysToAdvent get() = if (today.monthValue == 12) 0 else java.time.temporal.ChronoUnit.DAYS.between(today, java.time.LocalDate.of(today.year, 12, 1)).toInt()
+    val adventOpenedThisYear get() = if (s.adventYear == today.year) s.adventOpened else emptySet()
+
+    fun openAdvent(door: Int): Surprise? {
+        if (door > adventDay || door in adventOpenedThisYear) return null
+        val gift = adventSurprises[door - 1]
+        val year = today.year
+        update { gift.give(copy(adventYear = year, adventOpened = (if (adventYear == year) adventOpened else emptySet()) + door)) }
+        Audio.play(Sfx.LevelUp)
+        return gift
+    }
+
+    // MARK: Sticker book
+
+    fun sticker(id: String) { if (id !in s.stickers) update { copy(stickers = stickers + id) } }
+    val newStickers get() = (s.stickers.size - s.stickersSeen).coerceAtLeast(0)
+    fun sawStickers() { if (s.stickersSeen != s.stickers.size) update { copy(stickersSeen = stickers.size) } }
+
+    fun claimPrize(at: Int) {
+        val prize = stickerPrizes.firstOrNull { it.first == at } ?: return
+        if (s.stickers.size < at || at in s.prizesClaimed) return
+        update { prize.second.give(copy(prizesClaimed = prizesClaimed + at)) }
+        say("Sticker prize: ${prize.second.title}! 🎁")
+        Audio.play(Sfx.LevelUp)
+    }
 
     // MARK: Shop
 

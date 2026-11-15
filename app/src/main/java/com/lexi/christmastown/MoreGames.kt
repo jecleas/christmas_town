@@ -627,7 +627,7 @@ private fun SnowballGame(game: GameState, setPlaying: (Boolean) -> Unit) {
                     } else false
                 }
                 frame++
-                if (t >= ROUND_SECONDS) { running = false; over = true; game.snowballDone(hits, friends.value); setPlaying(false) }
+                if (t >= ROUND_SECONDS) { running = false; over = true; if (hits >= 10) game.sticker("snowball"); game.snowballDone(hits, friends.value); setPlaying(false) }
             }
         }
     }
@@ -756,7 +756,7 @@ fun DeliveryScreen(game: GameState) {
     fun nice(i: Int) = Random(i * 7919 + seed).nextFloat() >= flight.naughtyChance || i < 1
 
     LaunchedEffect(finished) {
-        if (finished) { message = "All presents delivered! 🎉"; Audio.play(Sfx.LevelUp); delay(2000); game.endDelivery(true) }
+        if (finished) { message = "All presents delivered! 🎉"; Audio.play(Sfx.LevelUp); game.sticker("flight"); delay(2000); game.endDelivery(true) }
     }
 
     BoxWithConstraints(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(hex(0x0E1633), hex(0x2B3A75))))) {

@@ -89,13 +89,15 @@ fun HubScreen(game: GameState) {
             }
         }
 
-        // Two big buttons
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        // Big buttons: jobs, advent calendar, sticker book, sleep
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Btn(
                 if (s.paidToday) "📋 Jobs ✅" else "📋 Jobs ${game.jobsDone}/${s.jobs.size}",
-                if (s.paidToday) Pal.green else Pal.red, 20, Modifier.weight(1f),
+                if (s.paidToday) Pal.green else Pal.red, 16, Modifier.weight(1f),
             ) { game.showJobs = true }
-            Btn("💤 Sleep", Pal.night, 20, Modifier.weight(1f)) { if (s.paidToday) game.sleep() else confirmSleep = true }
+            CornerButton("📅", Pal.darkRed, if (game.adventDay > 0 && !game.adventOpenedThisYear.containsAll((1..game.adventDay).toList())) "!" else null) { game.go(Place.Advent) }
+            CornerButton("📒", Pal.purple, game.newStickers.takeIf { it > 0 }?.toString()) { game.go(Place.Stickers) }
+            Btn("💤 Sleep", Pal.night, 16, Modifier.weight(1f)) { if (s.paidToday) game.sleep() else confirmSleep = true }
         }
     }
 
@@ -110,6 +112,14 @@ fun HubScreen(game: GameState) {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun CornerButton(icon: String, color: Color, badge: String?, onClick: () -> Unit) {
+    Box {
+        Btn(icon, color, 20, Modifier.width(58.dp), onClick = onClick)
+        if (badge != null) Txt(badge, 12, Color.White, modifier = Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-6).dp).background(Pal.red, RoundedCornerShape(8.dp)).padding(horizontal = 5.dp, vertical = 1.dp))
     }
 }
 
