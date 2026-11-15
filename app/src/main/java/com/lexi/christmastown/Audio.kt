@@ -28,6 +28,11 @@ enum class Music(val res: Int) {
     SilentNight(R.raw.music_silent_night),
     SleighRide(R.raw.music_sleigh_ride),
     JoyToTheWorld(R.raw.music_joy_to_the_world),
+    OChristmasTree(R.raw.music_o_christmas_tree),          // Snow Park (the Town Tree)
+    UpOnTheHousetop(R.raw.music_up_on_the_housetop),       // sleigh flight
+    JollyOldStNicholas(R.raw.music_jolly_old_st_nicholas), // Pets
+    GoodKingWenceslas(R.raw.music_good_king_wenceslas),    // snowball fight
+    TwelveDays(R.raw.music_twelve_days),                   // wrapping presents
 }
 
 object Audio {

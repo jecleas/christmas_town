@@ -170,7 +170,8 @@ fun GameApp(game: GameState) {
         val bgPlace = if (creating) Place.Closet else game.place
         val song = when {
             game.overlay == Overlay.Won || game.overlay == Overlay.ChristmasEve -> Music.JoyToTheWorld
-            game.delivering -> if (game.christmasEveRide) Music.JoyToTheWorld else Music.SleighRide
+            game.delivering -> if (game.christmasEveRide) Music.JoyToTheWorld else Music.UpOnTheHousetop
+            game.gameSong != null && game.place != null -> game.gameSong!!
             creating -> Music.WeWish
             else -> when (game.place) {
                 null -> Music.JingleBells
@@ -178,8 +179,8 @@ fun GameApp(game: GameState) {
                 Place.Sleigh -> Music.SleighRide
                 Place.Shop, Place.Friends, Place.Phone, Place.Closet -> Music.WeWish
                 Place.Decorate, Place.Snacks -> Music.SilentNight
-                Place.Park -> Music.JingleBells
-                Place.Pets -> Music.WeWish
+                Place.Park -> Music.OChristmasTree
+                Place.Pets -> Music.JollyOldStNicholas
             }
         }
         LaunchedEffect(song) { Audio.music(song) }

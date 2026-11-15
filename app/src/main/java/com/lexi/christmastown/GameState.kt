@@ -105,6 +105,8 @@ class GameState(private val prefs: SharedPreferences) {
     var christmasEveRide by mutableStateOf(false)
     var selectedSeed by mutableStateOf(Crop.Wheat)
     var now by mutableLongStateOf(System.currentTimeMillis())
+    /** A mini-game can ask for its own song while it's on screen. */
+    var gameSong by mutableStateOf<Music?>(null)
     private var toastUntil = 0L
 
     val level get() = levelFor(s.workdays)

@@ -137,3 +137,41 @@ save('music_joy_to_the_world.wav', song2(jw, [C, G, C, G, G, C, C, C, C, G, G, F
 # Sleigh Ride: Jingle Bells, faster, with bells on every beat
 save('music_sleigh_ride.wav', song2(jb, [C,C,C,C,F,C,G,G, C,C,C,C,F,C,G,C], 190, 4, bells=True, duty=0.125, bell_every=1))
 print('more songs done')
+
+# ---- Expansion songs (all public domain), one per new place / mini-game ----
+D_, Em, Am_ = ('D3','A3'), ('E3','B3'), ('A2','E3')
+
+# O Christmas Tree (3/4): the Town Tree in the Snow Park
+oct_a = [('G4',1), ('C5',.75),('C5',.25),('C5',1.5),('D5',.5), ('E5',.75),('E5',.25),('E5',1.5),('E5',.5), ('D5',.5),('E5',.5),('F5',1),('B4',1), ('D5',1),('C5',2)]
+oct_b = [('G5',.5),('G5',.5),('E5',1),('A5',1.5),('G5',.5),('G5',.5),('F5',.5),('F5',1.5), ('F5',.5),('F5',.5),('D5',1),('G5',1.5),('F5',.5),('F5',.5),('E5',.5),('E5',1)]
+oct_m = oct_a + oct_a[1:] + oct_b + oct_a[1:]
+save('music_o_christmas_tree.wav', song2(oct_m, [C, C, G, G, C, C, G, C, C, C, G, G, C, C, G, C, C, G, C, C], 120, 3, bells=False, duty=0.5))
+
+# Up on the Housetop (4/4): the sleigh flight
+uh = [('G4',1),('G4',1),('A4',1),('G4',1), ('E4',1),('C4',1),('E4',1),('G4',1), ('A4',1),('A4',1),('G4',1),('E4',1), ('D4',3),('R',1),
+      ('G4',1),('G4',1),('A4',1),('G4',1), ('E4',1),('C4',1),('E4',1),('G4',1), ('A4',1),('A4',1),('G4',1),('E4',1), ('D4',1),('D4',1),('C4',2),
+      ('F4',1),('F4',1),('A4',2), ('E4',1),('E4',1),('G4',2), ('D4',1),('D4',1),('G4',1),('G4',1), ('E4',1),('C4',1),('E4',2),
+      ('G4',1),('G4',1),('A4',1),('G4',1), ('E4',1),('C4',1),('E4',1),('G4',1), ('A4',1),('A4',1),('G4',1),('E4',1), ('D4',1),('D4',1),('C4',2)]
+uh = [(n if n == 'R' else n[:-1] + str(int(n[-1]) + 1), b) for n, b in uh]
+save('music_up_on_the_housetop.wav', song2(uh, [C, C, F, G, C, C, F, C, F, C, G, C, C, C, F, C], 150, 4, bells=True, duty=0.25))
+
+# Jolly Old St Nicholas (4/4): the Pets place
+jn = [('G4',1),('G4',1),('G4',1),('G4',1), ('F4',1),('F4',1),('F4',2), ('E4',1),('E4',1),('E4',1),('E4',1), ('D4',4),
+      ('A4',1),('A4',1),('A4',1),('A4',1), ('G4',1),('G4',1),('G4',2), ('F4',1),('F4',1),('F4',1),('F4',1), ('E4',4),
+      ('G4',1),('G4',1),('G4',1),('G4',1), ('F4',1),('F4',1),('F4',2), ('E4',1),('E4',1),('E4',1),('E4',1), ('D4',2),('G4',2),
+      ('A4',1),('G4',1),('F4',1),('E4',1), ('D4',1),('E4',1),('F4',2), ('E4',1),('D4',1),('E4',1),('D4',1), ('C4',4)]
+jn = [(n[:-1] + str(int(n[-1]) + 1), b) for n, b in jn]
+save('music_jolly_old_st_nicholas.wav', song2(jn, [C, G, C, G, F, C, G, C, C, G, C, G, F, C, G, C], 132, 4, bells=False, duty=0.25))
+
+# Good King Wenceslas (4/4): the snowball fight
+gk = [('C5',1),('C5',1),('C5',1),('D5',1), ('C5',1),('C5',1),('G4',2), ('A4',1),('G4',1),('A4',1),('B4',1), ('C5',2),('C5',2)] * 2 + \
+     [('G5',1),('F5',1),('E5',1),('D5',1), ('E5',1),('D5',1),('C5',2), ('A4',1),('G4',1),('A4',1),('B4',1), ('C5',2),('C5',2),
+      ('G4',1),('G4',1),('A4',1),('B4',1), ('C5',1),('C5',1),('D5',2), ('G5',1),('F5',1),('E5',1),('D5',1), ('C5',2),('F5',2), ('C5',4)]
+save('music_good_king_wenceslas.wav', song2(gk, [C, C, F, C, C, C, F, C, C, C, F, C, C, G, G, F, C], 140, 4, bells=True, duty=0.125))
+
+# The Twelve Days of Christmas (4/4): wrapping presents
+td = [('G4',.5),('G4',.5),('G4',1),('C5',.5),('C5',.5),('C5',1),('B4',.5),('C5',.5),('D5',.5),('E5',.5),('F5',.5),('D5',.5),('E5',2),
+      ('F5',.5),('G5',.5),('A5',.5),('F5',.5),('E5',.5),('C5',.5),('D5',1),('C5',2),('R',1)]
+td = td + td + [('G5',2),('D5',1),('E5',1),('C5',3),('R',1)] + td
+save('music_twelve_days.wav', song2(td, [C, C, F, G, C, C, F, G, C, C, G, C, C, F, G, C], 150, 4, bells=True, duty=0.25))
+print('expansion songs done')

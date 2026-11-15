@@ -31,11 +31,13 @@ object Pal {
 @Serializable enum class Outfit(val title: String, val price: Int, val sprite: String?) {
     Tunic("Elf Tunic", 0, null), Sweater("Christmas Sweater", 500, "outfit_sweater"),
     Dress("Party Dress", 400, "outfit_dress"), Overalls("Overalls", 450, "outfit_overalls"),
+    Pajamas("Polka Pajamas", 350, "outfit_pajamas"), Snowsuit("Snowsuit", 550, "outfit_snowsuit"),
 }
 
 @Serializable enum class Hat(val title: String, val price: Int, val sprite: String?) {
     None("No Hat", 0, null), Elf("Elf Hat", 0, "hat_elf"), Beanie("Beanie", 300, "hat_beanie"),
     Santa("Santa Hat", 600, "hat_santa"), Antlers("Antlers", 500, "hat_antlers"), Crown("Crown", 1500, "hat_crown"),
+    Earmuffs("Earmuffs", 350, "hat_earmuffs"), TopHat("Top Hat", 700, "hat_tophat"),
 }
 
 @Serializable enum class Accessory(val title: String, val price: Int, val sprite: String?) {
@@ -127,6 +129,10 @@ enum class ItemKind { Furniture, Decoration }
     Poinsettia("Poinsettia", 150, "poinsettia", Spot.Floor, ItemKind.Decoration),
     GingerbreadHouse("Gingerbread House", 250, "ginghouse", Spot.Floor, ItemKind.Decoration),
     Candles("Candles", 120, "candles", Spot.Floor, ItemKind.Decoration),
+    RockingChair("Rocking Chair", 450, "rockchair", Spot.Floor, ItemKind.Furniture),
+    ToyChest("Toy Chest", 500, "toychest", Spot.Floor, ItemKind.Furniture),
+    Nutcracker("Nutcracker", 300, "nutcracker", Spot.Floor, ItemKind.Decoration),
+    Sled("Sled", 350, "sled", Spot.Floor, ItemKind.Decoration),
 }
 
 /** One thing placed in the house. x/y are fractions of the room (0..1). Floor 0 = downstairs. */
@@ -286,6 +292,28 @@ val npcs = listOf(
             "Seeds need water before they grow. 💧",
         ),
         Item.Poinsettia,
+    ),
+    Npc(
+        "Holly", ElfLook(true, 1, HairStyle.Bob, 3, 2, Outfit.Overalls, 2, Hat.TopHat, 0), "Inventor",
+        listOf(
+            "EUREKA! I invented a cookie that eats itself. Wait, that's bad.",
+            "Wrapped presents go on the sleigh first. I measured it! 📏",
+            "Happy reindeer steer better. That's SCIENCE. 🔬",
+            "My next invention: a snowball that comes back like a yo-yo!",
+            "Pets get hungry over time, so check on them every day! 🐾",
+        ),
+        Item.ToyChest,
+    ),
+    Npc(
+        "Frost", ElfLook(false, 0, HairStyle.Short, 6, 1, Outfit.Snowsuit, 6, Hat.Earmuffs, 2), "Snow Sculptor",
+        listOf(
+            "What do snowmen eat for breakfast? Frosted flakes! ❄️😂",
+            "I built a snowman of Santa. He said it looked 'a bit chilly'.",
+            "Snowball fight in the Snow Park? I'm SO in. Bring it! ⛄",
+            "Why did the reindeer cross the road? To get to the other SLEIGH! 🦌",
+            "The Town Tree needs ornaments, tinsel AND a star. Don't forget the star!",
+        ),
+        Item.Sled,
     ),
 )
 

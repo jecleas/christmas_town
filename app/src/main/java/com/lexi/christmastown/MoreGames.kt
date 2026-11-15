@@ -84,8 +84,18 @@ private val bowColors = listOf(hex(0xFFCC4D), hex(0xE5394B), hex(0xF4F8FF), hex(
 private val foldDirs = listOf(Offset(1f, 0f), Offset(-1f, 0f), Offset(0f, 1f))   // left flap →, right flap ←, top flap ↓
 private val tapeSpots = listOf(0.3f to 0.5f, 0.7f to 0.5f, 0.5f to 0.22f)
 
+/** Plays [song] while this screen is showing. */
+@Composable
+fun GameSong(game: GameState, song: Music) {
+    androidx.compose.runtime.DisposableEffect(song) {
+        game.gameSong = song
+        onDispose { if (game.gameSong == song) game.gameSong = null }
+    }
+}
+
 @Composable
 fun WrapGame(game: GameState) {
+    GameSong(game, Music.TwelveDays)
     var phase by remember { mutableStateOf(WrapPhase.Pick) }
     var toy by remember { mutableStateOf(Toy.Teddy) }
     var paper by remember { mutableStateOf(Paper.Stripes) }
@@ -582,6 +592,7 @@ private class Throw(val to: Offset, val born: Float, val fort: Int?)
 
 @Composable
 private fun SnowballGame(game: GameState, setPlaying: (Boolean) -> Unit) {
+    GameSong(game, Music.GoodKingWenceslas)
     var running by remember { mutableStateOf(false) }
     var over by remember { mutableStateOf(false) }
     var t by remember { mutableFloatStateOf(0f) }
