@@ -69,6 +69,8 @@ object ElfColors {
     Carrot("Carrot", "carrots", 20, 10, 1, "carrot"),
     Berry("Berry", "berries", 40, 14, 2, "berry"),
     Cocoa("Cocoa", "cocoa pods", 60, 18, 3, "cocoa"),
+    Ginger("Ginger", "ginger roots", 70, 20, 6, "ginger"),
+    Peppermint("Peppermint", "peppermint leaves", 80, 22, 7, "peppermint"),
 }
 
 const val HARVEST = 3
@@ -77,6 +79,9 @@ const val HARVEST = 3
     Sugar("Sugar Cookie", mapOf(Crop.Wheat to 2), 1, 15, "cookie_sugar"),
     BerryJam("Berry Cookie", mapOf(Crop.Wheat to 2, Crop.Berry to 1), 2, 20, "cookie_berry"),
     Choco("Choc Chip Cookie", mapOf(Crop.Wheat to 2, Crop.Cocoa to 1), 3, 25, "cookie_choco"),
+    Gingerbread("Gingerbread Person", mapOf(Crop.Wheat to 2, Crop.Ginger to 1), 6, 30, "cookie_ginger"),
+    CandyCane("Candy Cane Cookie", mapOf(Crop.Wheat to 2, Crop.Peppermint to 1), 7, 30, "cookie_candycane"),
+    Reindeer("Reindeer Cookie", mapOf(Crop.Wheat to 2, Crop.Cocoa to 1, Crop.Berry to 1), 8, 40, "cookie_reindeer"),
 }
 
 @Serializable enum class Toy(val title: String, val unlockLevel: Int, val sprite: String, val steps: List<String>) {
@@ -86,6 +91,9 @@ const val HARVEST = 3
     Doll("Doll", 3, "doll", listOf("Sew the face", "Brush the hair", "Pick a dress")),
     Drum("Drum", 4, "drum", listOf("Stretch the top", "Paint the drum", "Add the sticks")),
     Robot("Robot", 5, "robot", listOf("Bolt the body", "Charge the battery", "Pick a paint")),
+    RockingHorse("Rocking Horse", 6, "rockinghorse", listOf("Carve the rockers", "Brush the mane", "Paint the saddle")),
+    YoYo("Yo-Yo", 7, "yoyo", listOf("Wind the string", "Glue the halves", "Pick a color")),
+    SnowGlobe("Snow Globe", 8, "snowglobe", listOf("Shake in the snow", "Seal the glass", "Paint the base")),
 }
 
 @Serializable enum class Food(val title: String, val price: Int, val energy: Int, val sprite: String) {
@@ -135,25 +143,40 @@ val startingHouse = listOf(
 // MARK: - Reindeer
 
 val reindeerNames = listOf("Dasher", "Dancer", "Prancer", "Vixen", "Comet", "Cupid", "Donner", "Blitzen", "Rudolph")
-fun reindeerCount(level: Int) = listOf(2, 4, 6, 8, 9)[(level - 1).coerceIn(0, 4)]
+/** Rudolph (the last name) only joins at the top level. */
+fun reindeerCount(level: Int) = listOf(2, 3, 4, 5, 6, 7, 8, 9)[(level - 1).coerceIn(0, MAX_LEVEL - 1)]
+
+/** Things you can put on a reindeer in its care screen. They show everywhere the reindeer does. */
+@Serializable enum class Deco(val title: String, val emoji: String, val price: Int, val sprite: String) {
+    Bells("Jingle Bells", "🔔", 150, "rd_bells"),
+    Scarf("Cozy Scarf", "🧣", 200, "rd_scarf"),
+    Lights("Antler Lights", "💡", 250, "rd_lights"),
+    Blanket("Saddle Blanket", "🟥", 300, "rd_blanket"),
+}
+
+/** Reindeer you've fully cared for and harnessed pull the sleigh better. */
+const val TEAM_SIZE = 4
 
 // MARK: - Levels & jobs
 
-val levelTitles = listOf("Helper Elf", "Cookie Elf", "Toy Elf", "Sleigh Elf", "Santa's Best Elf")
-const val MAX_LEVEL = 5
+val levelTitles = listOf("Helper Elf", "Cookie Elf", "Toy Elf", "Sleigh Elf", "Workshop Star", "Gift Wrapper", "Tree Trimmer", "Santa's Best Elf")
+const val MAX_LEVEL = 8
 const val PAY = 1000
 const val CHRISTMAS_EVE_WORKDAYS = 10
 
 /** Workdays needed to reach each level. */
 fun levelFor(workdays: Int) = when {
-    workdays >= 8 -> 5
-    workdays >= 6 -> 4
-    workdays >= 4 -> 3
-    workdays >= 2 -> 2
+    workdays >= 8 -> 8      // Rudolph joins two days before Christmas Eve (10 workdays)
+    workdays >= 7 -> 7
+    workdays >= 6 -> 6
+    workdays >= 5 -> 5
+    workdays >= 3 -> 4
+    workdays >= 2 -> 3
+    workdays >= 1 -> 2
     else -> 1
 }
 
-@Serializable enum class JobKind(val emoji: String) { Bake("🍪"), Toys("🧸"), Reindeer("🦌"), SortList("📜"), Deliver("🛷") }
+@Serializable enum class JobKind(val emoji: String) { Bake("🍪"), Toys("🧸"), Reindeer("🦌"), SortList("📜"), Deliver("🛷"), Wrap("🎁"), Tree("🎄") }
 
 @Serializable data class Job(val kind: JobKind, val goal: Int, val done: Int = 0) {
     val finished get() = done >= goal
@@ -163,15 +186,33 @@ fun levelFor(workdays: Int) = when {
         JobKind.Reindeer -> "Feed & brush every reindeer"
         JobKind.SortList -> "Sort $goal kids on Santa's list"
         JobKind.Deliver -> "Deliver $goal presents"
+        JobKind.Wrap -> "Wrap $goal presents"
+        JobKind.Tree -> "Decorate the Town Tree"
     }
 }
 
 fun jobsFor(level: Int): List<Job> = buildList {
-    add(Job(JobKind.Bake, listOf(2, 3, 3, 4, 4)[level - 1]))
-    add(Job(JobKind.Toys, listOf(2, 3, 4, 5, 6)[level - 1]))
+    val i = level.coerceIn(1, MAX_LEVEL) - 1
+    add(Job(JobKind.Bake, listOf(2, 3, 3, 4, 4, 4, 5, 5)[i]))
+    add(Job(JobKind.Toys, listOf(2, 3, 4, 4, 5, 5, 5, 6)[i]))
     add(Job(JobKind.Reindeer, 1))
-    if (level >= 2) add(Job(JobKind.SortList, 5))
-    if (level >= 3) add(Job(JobKind.Deliver, listOf(0, 0, 4, 5, 6)[level - 1]))
+    if (level >= 2) add(Job(JobKind.SortList, listOf(0, 5, 5, 5, 5, 5, 6, 6)[i]))
+    if (level >= 3) add(Job(JobKind.Deliver, listOf(0, 0, 4, 4, 5, 6, 6, 7)[i]))
+    if (level >= 6) add(Job(JobKind.Wrap, listOf(0, 0, 0, 0, 0, 2, 2, 3)[i]))
+    if (level >= 7) add(Job(JobKind.Tree, 1))
+}
+
+/** How tricky the sleigh flight is: faster, more clouds, naughty houses, and a dark foggy night at the top. */
+data class Flight(val speed: Float, val cloudEvery: Float, val naughtyChance: Float, val foggy: Boolean)
+
+fun flightFor(level: Int, christmasEve: Boolean): Flight = when {
+    christmasEve -> Flight(95f, 260f, 0.2f, true)
+    else -> Flight(
+        speed = 70f + 5f * (level - 3).coerceAtLeast(0),
+        cloudEvery = listOf(520f, 520f, 520f, 460f, 400f, 340f, 300f, 260f)[(level - 1).coerceIn(0, 7)],
+        naughtyChance = if (level >= 5) 0.25f else 0.15f,
+        foggy = level >= 8,
+    )
 }
 
 // MARK: - Santa's list
@@ -241,7 +282,7 @@ val npcs = listOf(
         listOf(
             "Reindeer love carrots! Grow them in the Greenhouse.",
             "Feed AND brush every reindeer to finish the reindeer job.",
-            "Rudolph joins the stable at Level 5. His nose glows!",
+            "Rudolph joins the stable at Level 8. His nose glows!",
             "Seeds need water before they grow. 💧",
         ),
         Item.Poinsettia,
@@ -250,6 +291,28 @@ val npcs = listOf(
 
 /** Twinkle's party: pick a theme, get a decoration. */
 val partyThemes = listOf("Candy Land 🍭" to Item.GingerbreadHouse, "Winter Wonderland ⛄" to Item.Snowman, "Cozy Cabin 🕯️" to Item.Candles)
+
+// MARK: - Pets (bought with in-game money only)
+
+@Serializable enum class PetKind(val title: String, val price: Int, val sprite: String, val noise: String, val food: String, val jokes: List<String>) {
+    Penguin("Penguin", 600, "pet_penguin", "Squawk!", "🐟", listOf("*waddles in a circle*", "*slides on its tummy* Wheee!", "*bows politely*", "I'm wearing a tuxedo because I'm FANCY.")),
+    Puppy("Puppy", 700, "pet_puppy", "Woof!", "🦴", listOf("*chases own tail*", "*steals a sock* 🧦", "Is it walkies time?!", "*rolls over for tummy rubs*")),
+    Kitten("Kitten", 700, "pet_kitten", "Mew!", "🐟", listOf("*knocks an ornament off the tree*", "*naps in a box* 📦", "*bats at the tinsel*", "Purrrrr...")),
+    Bunny("Bunny", 650, "pet_bunny", "*thump thump*", "🥕", listOf("*binky jump!*", "*wiggles nose*", "*hides in a stocking*", "Carrot? CARROT?!")),
+    Owl("Snowy Owl", 900, "pet_owl", "Hoo hoo!", "🐭", listOf("*turns head ALL the way around*", "Hoo is the best elf? YOU!", "*fluffs feathers*", "*winks slowly*")),
+    Fox("Arctic Fox", 1000, "pet_fox", "Yip yip!", "🍗", listOf("*pounces into a snow pile*", "*curls up with tail as a blanket*", "*does a happy zoomie*", "Yip! I hid your cookie. Somewhere.")),
+}
+
+/** One pet you own. Meters are worked out from when you last fed, washed and played with it. */
+@Serializable data class Pet(val id: Long, val kind: PetKind, val name: String, val fedAt: Long = 0, val washedAt: Long = 0, val pettedAt: Long = 0, val giftDay: Int = 0)
+
+/** 0..1 meters that go down slowly over real time (full → empty in [hours]). */
+fun meter(at: Long, now: Long, hours: Float) = if (at == 0L) 0.3f else (1f - (now - at) / (hours * 3_600_000f)).coerceIn(0f, 1f)
+fun Pet.fullness(now: Long) = meter(fedAt, now, 8f)
+fun Pet.cleanness(now: Long) = meter(washedAt, now, 24f)
+fun Pet.happiness(now: Long) = (meter(pettedAt, now, 6f) * 0.5f + fullness(now) * 0.25f + cleanness(now) * 0.25f)
+
+val petNames = listOf("Pip", "Biscuit", "Snowball", "Mochi", "Waffles", "Noodle", "Pickle", "Sprinkles", "Muffin", "Ziggy", "Bean", "Tinsel")
 
 // MARK: - Activities (the icons on the main screen)
 
@@ -263,10 +326,12 @@ enum class Place(val title: String, val sprite: String, val side: Side, val colo
     Workshop("Workshop", "teddy", Side.Left, hex(0xE5394B)),
     SantaList("Santa's List", "santa", Side.Left, hex(0xA02338)),
     Sleigh("Sleigh", "sleigh", Side.Left, hex(0x3D6FD6)),
+    Park("Snow Park", "snowman", Side.Left, hex(0x5BA4D9)),
     Decorate("Decorate", "tree", Side.Right, hex(0x2E7D4A)),
     Shop("Shop", "presents", Side.Right, hex(0x9B6BE0)),
     Closet("Closet", "", Side.Right, hex(0xFF8FB0)),
     Friends("Friends", "", Side.Right, hex(0x2EB5A5)),
     Phone("Phone", "phone", Side.Right, hex(0x3D6FD6)),
     Snacks("Snacks", "cocoa_mug", Side.Right, hex(0xC98B5E)),
+    Pets("Pets", "pet_penguin", Side.Right, hex(0xF2A93B)),
 }

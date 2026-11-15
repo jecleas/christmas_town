@@ -131,9 +131,11 @@ private fun badge(game: GameState, p: Place): String? {
         Place.Greenhouse -> if (s.plots.any { it.stage(game.now) == 3 || it.stage(game.now) == 1 }) "!" else null
         Place.Bakery -> jobBadge(JobKind.Bake, 1)
         Place.Stable -> jobBadge(JobKind.Reindeer, 1)
-        Place.Workshop -> jobBadge(JobKind.Toys, 1)
+        Place.Workshop -> if (job(JobKind.Toys)?.finished == true && job(JobKind.Wrap)?.finished == false && !s.paidToday) "!" else jobBadge(JobKind.Toys, 1)
         Place.SantaList -> jobBadge(JobKind.SortList, 2)
         Place.Sleigh -> jobBadge(JobKind.Deliver, 3)
+        Place.Park -> if (s.jobs.any { it.kind == JobKind.Tree }) jobBadge(JobKind.Tree, 7) else if (s.snowballDay != s.day) "!" else null
+        Place.Pets -> if (s.pets.any { it.fullness(game.now) < 0.4f || it.cleanness(game.now) < 0.4f }) "!" else null
         Place.Decorate -> if (Item.entries.any { game.available(it) > 0 }) "New" else null
         Place.Friends -> if (npcs.any { it.name !in s.talkedToday }) "!" else null
         Place.Phone -> (listOf(GROUP) + game.met).sumOf { game.unread(it) }.takeIf { it > 0 }?.toString() ?: if (game.groupHasNews) "!" else null
@@ -218,9 +220,13 @@ private fun LivingRoom(game: GameState) {
         Box(Modifier.align(Alignment.BottomCenter).padding(bottom = (h - floorY - 70).coerceAtLeast(0f).dp)) {
             Row(verticalAlignment = Alignment.Bottom) {
                 Bob(4f, 900) { ElfPx(s.look, 200.dp) }
-                Bob(3f, 650) { Px(Sprites.bitmap("reindeer|buddy", Sprites.rows("reindeer"), mapOf('N' to Pal.red)), 54.dp) }
+                val buddy = game.sleighTeam.firstOrNull() ?: "Dasher"
+                Bob(3f, 650) { ReindeerPx(buddy, game.decosOn(buddy), 54.dp) }
             }
         }
+
+        // Your pets wander around (tap them!)
+        s.pets.take(3).forEachIndexed { i, pet -> WanderingPet(pet, w, floorY + 40, i, game.now) }
 
         // Table of today's goodies
         Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {

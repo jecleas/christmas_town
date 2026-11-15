@@ -148,9 +148,11 @@ fun backgroundFor(p: Place?): Brush = when (p) {
     Place.SantaList, Place.Sleigh -> Brush.verticalGradient(listOf(hex(0x7A1E2E), hex(0xB8364A)))
     Place.Friends, Place.Closet -> Brush.verticalGradient(listOf(hex(0x2C4F8C), hex(0x8FB9E8)))
     Place.Shop -> Brush.verticalGradient(listOf(hex(0xE6DAFF), hex(0xC6B1F2)))
+    Place.Park -> Brush.verticalGradient(listOf(hex(0x2C4F8C), hex(0x9BC8EE)))
+    Place.Pets -> Brush.verticalGradient(listOf(hex(0xFFE3B0), hex(0xF7C27A)))
 }
 
-private val darkPlaces = setOf(null, Place.Decorate, Place.Snacks, Place.Phone, Place.Stable, Place.SantaList, Place.Sleigh, Place.Friends, Place.Closet)
+private val darkPlaces = setOf(null, Place.Decorate, Place.Snacks, Place.Phone, Place.Stable, Place.SantaList, Place.Sleigh, Place.Friends, Place.Closet, Place.Park)
 fun textOn(p: Place?) = if (p in darkPlaces) Color.White else Pal.ink
 
 // MARK: - The whole app
@@ -176,6 +178,8 @@ fun GameApp(game: GameState) {
                 Place.Sleigh -> Music.SleighRide
                 Place.Shop, Place.Friends, Place.Phone, Place.Closet -> Music.WeWish
                 Place.Decorate, Place.Snacks -> Music.SilentNight
+                Place.Park -> Music.JingleBells
+                Place.Pets -> Music.WeWish
             }
         }
         LaunchedEffect(song) { Audio.music(song) }
@@ -220,6 +224,8 @@ private fun PlaceScreen(game: GameState, p: Place) = when (p) {
     Place.Friends -> FriendsScreen(game)
     Place.Phone -> PhoneScreen(game)
     Place.Snacks -> SnacksScreen(game)
+    Place.Park -> ParkScreen(game)
+    Place.Pets -> PetsScreen(game)
 }
 
 /** A full-screen activity: big Back button, title, money and energy, then the content. */
@@ -331,7 +337,10 @@ private fun OverlayCard(game: GameState) {
 fun unlocksFor(level: Int) = when (level) {
     2 -> "New: Toy trains 🚂, berry cookies, Santa's naughty/nice list, more reindeer!"
     3 -> "New: Dolls, choc chip cookies, sleigh deliveries 🛷, a bigger greenhouse, more reindeer!"
-    4 -> "New: Drums 🥁 and more reindeer!"
-    5 -> "New: Robots 🤖 and RUDOLPH joins the stable! 🔴"
+    4 -> "New: Drums 🥁, more reindeer and trickier sleigh rides!"
+    5 -> "New: Robots 🤖, another reindeer and windier sleigh rides! ☁️"
+    6 -> "New: Rocking horses 🐴, gingerbread people, ginger seeds, a reindeer, and Santa wants presents WRAPPED 🎁"
+    7 -> "New: Yo-yos, candy cane cookies, peppermint seeds, a reindeer, and the Town Tree needs decorating 🎄"
+    8 -> "New: Snow globes, reindeer cookies, foggy sleigh nights... and RUDOLPH joins the stable! His nose glows! 🔴"
     else -> ""
 }

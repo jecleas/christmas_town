@@ -85,13 +85,21 @@ fun BakeryScreen(game: GameState) {
     var tool by remember { mutableStateOf(Topping.Sprinkles) }
     val tops = remember { mutableStateListOf<Top>() }
     val scope = rememberCoroutineScope()
+    var house by remember { mutableStateOf(false) }
 
+    if (house) { GingerbreadGame(game) { house = false }; return }
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         JobChip(game, JobKind.Bake)
         when (phase) {
-            BakePhase.Pick -> RecipeList(game) { c ->
-                if (!game.canBake(c)) { game.say("Not enough ingredients! Grow some in the Greenhouse 🌱"); Audio.play(Sfx.Oops) }
-                else if (game.hasEnergy(5)) { cookie = c; stirs = 0; tops.clear(); icing = null; perfect = false; phase = BakePhase.Mix }
+            BakePhase.Pick -> {
+                RecipeList(game) { c ->
+                    if (!game.canBake(c)) { game.say("Not enough ingredients! Grow some in the Greenhouse 🌱"); Audio.play(Sfx.Oops) }
+                    else if (game.hasEnergy(5)) { cookie = c; stirs = 0; tops.clear(); icing = null; perfect = false; phase = BakePhase.Mix }
+                }
+                Btn(hex(0x8A5A3A), Modifier.fillMaxWidth(), onClick = {
+                    if (!game.canBuildHouse()) { game.say("A gingerbread house needs 3 wheat! Grow some in the Greenhouse 🌾"); Audio.play(Sfx.Oops) }
+                    else if (game.hasEnergy(5)) house = true
+                }) { Px("ginghouse", 32.dp); Txt("Build a Gingerbread House (3 wheat, ⚡5)", 15, Color.White) }
             }
             BakePhase.Mix -> MixBowl(stirs) {
                 stirs++
@@ -300,6 +308,9 @@ private fun kindsFor(t: Toy) = when (t) {
     Toy.Doll -> listOf(StepKind.Dots, StepKind.Fill, StepKind.Paint)
     Toy.Drum -> listOf(StepKind.Fill, StepKind.Paint, StepKind.Dots)
     Toy.Robot -> listOf(StepKind.Dots, StepKind.Fill, StepKind.Paint)
+    Toy.RockingHorse -> listOf(StepKind.Dots, StepKind.Fill, StepKind.Paint)
+    Toy.YoYo -> listOf(StepKind.Fill, StepKind.Dots, StepKind.Paint)
+    Toy.SnowGlobe -> listOf(StepKind.Fill, StepKind.Dots, StepKind.Paint)
 }
 
 /** Which pixel letter in the toy's sprite gets your chosen color. */
@@ -308,6 +319,9 @@ private fun paintChar(t: Toy) = when (t) {
     Toy.CandyCane, Toy.Train, Toy.Drum -> 'r'
     Toy.Doll -> 'p'
     Toy.Robot -> 'y'
+    Toy.RockingHorse -> 'r'
+    Toy.YoYo -> 'r'
+    Toy.SnowGlobe -> 'd'
 }
 
 private fun fillHint(t: Toy) = when (t) {
@@ -317,16 +331,33 @@ private fun fillHint(t: Toy) = when (t) {
     Toy.Doll -> "Tap to brush her hair! 💇"
     Toy.Drum -> "Tap to stretch the drum skin tight! 🥁"
     Toy.Robot -> "Tap to charge the battery! ⚡"
+    Toy.RockingHorse -> "Tap to brush the mane! 🐴"
+    Toy.YoYo -> "Tap to wind the string round and round! 🌀"
+    Toy.SnowGlobe -> "Tap to shake in the snow! ❄️"
 }
 
-private fun fillPuff(t: Toy) = when (t) { Toy.Teddy -> "☁️"; Toy.CandyCane -> "✨"; Toy.Train -> "🔩"; Toy.Doll -> "💫"; Toy.Drum -> "💥"; Toy.Robot -> "⚡" }
+private fun fillPuff(t: Toy) = when (t) { Toy.Teddy -> "☁️"; Toy.CandyCane -> "✨"; Toy.Train -> "🔩"; Toy.Doll -> "💫"; Toy.Drum -> "💥"; Toy.Robot -> "⚡"; Toy.RockingHorse -> "✨"; Toy.YoYo -> "🌀"; Toy.SnowGlobe -> "❄️" }
 
 private const val FILL_TAPS = 10
 private val toyPaints = listOf(hex(0x9A5B34), hex(0xE5394B), hex(0x3D6FD6), hex(0x3FAF5A), hex(0x9B6BE0), hex(0xFF8FB0), hex(0xFFCC4D))
 private val dotSpots = listOf(0.2f to 0.3f, 0.5f to 0.12f, 0.8f to 0.3f, 0.76f to 0.78f, 0.24f to 0.78f)
 
+private enum class ShopMode(val title: String) { Make("🔨 Make toys"), Wrap("🎁 Wrap presents") }
+
 @Composable
 fun WorkshopScreen(game: GameState) {
+    var mode by remember { mutableStateOf(if (game.s.jobs.any { it.kind == JobKind.Wrap && !it.finished } && game.s.toys.values.sum() > 0 && game.s.jobs.first { it.kind == JobKind.Toys }.finished) ShopMode.Wrap else ShopMode.Make) }
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Tabs(ShopMode.entries, mode, { it.title }) { mode = it }
+        when (mode) {
+            ShopMode.Make -> ToyMaker(game)
+            ShopMode.Wrap -> WrapGame(game)
+        }
+    }
+}
+
+@Composable
+private fun ToyMaker(game: GameState) {
     var toy by remember { mutableStateOf(Toy.Teddy) }
     var step by remember { mutableIntStateOf(0) }        // 0 = not started, 1..3 = which step
     var taps by remember { mutableIntStateOf(0) }
@@ -448,83 +479,3 @@ private fun DotsLayer(done: Int, onTap: (Int) -> Unit) {
     }
 }
 
-// ======================================================================
-// MARK: - Stable: feed carrots bite by bite, rub to brush
-// ======================================================================
-
-@Composable
-fun StableScreen(game: GameState) {
-    val s = game.s
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        JobChip(game, JobKind.Reindeer)
-        Row(Modifier.panel().padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            Px("carrot", 24.dp); Txt("Carrots ×${s.crops.n(Crop.Carrot)}  ·  Rub a reindeer to brush it!", 14)
-        }
-        Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            for (pair in game.reindeer.chunked(2)) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                for (name in pair) ReindeerCard(game, name)
-            }
-        }
-    }
-}
-
-private const val RUB_DISTANCE = 450f   // how far (dp) you rub to finish brushing
-
-@Composable
-private fun ReindeerCard(game: GameState, name: String) {
-    val fed = name in game.s.fed
-    val brushed = name in game.s.brushed
-    val rudolph = name == "Rudolph"
-    var bites by remember(name) { mutableIntStateOf(-1) }   // -1 = no carrot out
-    var rubbed by remember(name) { mutableFloatStateOf(0f) }
-
-    Column(
-        Modifier.width(196.dp).panel(if (fed && brushed) hex(0xD8F5DD) else Pal.cream).padding(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Box(
-            Modifier.fillMaxWidth().height(100.dp).pointerInput(name) {
-                detectDragGestures { change, drag ->
-                    change.consume()
-                    if (name in game.s.brushed) return@detectDragGestures
-                    val before = rubbed
-                    rubbed += drag.getDistance() / density
-                    if ((rubbed / 90).toInt() > (before / 90).toInt()) Audio.play(Sfx.Tap)
-                    if (rubbed >= RUB_DISTANCE) game.brush(name)
-                }
-            },
-            contentAlignment = Alignment.BottomCenter,
-        ) {
-            val img = Sprites.bitmap("reindeer|$rudolph", Sprites.rows("reindeer"), mapOf('N' to if (rudolph) Pal.red else Pal.ink))
-            Bob(if (fed && brushed) 6f else 2f, if (fed && brushed) 400 else 900) { Px(img, 80.dp) }
-            if (!brushed && rubbed > 0) {
-                val sparkles = (rubbed / 60).toInt().coerceAtMost(7)
-                for (i in 0 until sparkles) Txt("✨", 14, modifier = Modifier.align(Alignment.TopStart).offset((10 + (i * 37) % 150).dp, (6 + (i * 23) % 60).dp))
-            }
-            if (bites >= 0) {
-                Box(Modifier.align(Alignment.CenterStart).squish {
-                    bites++
-                    Audio.play(Sfx.Munch)
-                    if (bites >= 3) { game.feed(name); bites = -1 }
-                }) {
-                    Px("carrot", (46 - bites * 12).dp)
-                }
-            }
-        }
-        Txt(if (rudolph) "$name 🔴" else name, 17)
-        when {
-            bites >= 0 -> Txt("Tap the carrot! 🥕 (${bites}/3 bites)", 13, Pal.darkGreen)
-            !brushed -> Box(Modifier.size(170.dp, 10.dp).clip(RoundedCornerShape(3.dp)).background(Color.White).border(1.dp, Pal.ink, RoundedCornerShape(3.dp))) {
-                Box(Modifier.fillMaxHeight().width(170.dp * (rubbed / RUB_DISTANCE).coerceAtMost(1f)).background(hex(0xFFCC4D)))
-            }
-            else -> Txt((if (fed) "🥕✅ " else "🥕❌ ") + "🪮✅", 13)
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Btn(if (fed) "Fed ✅" else "Feed 🥕", hex(0xE0843A), 13, Modifier.weight(1f), enabled = !fed && bites < 0) {
-                if (game.s.crops.n(Crop.Carrot) <= 0) game.feed(name)      // shows the "no carrots" message
-                else if (game.hasEnergy(2)) bites = 0
-            }
-            Txt(if (brushed) "Shiny ✨" else "Rub me!", 13, if (brushed) Pal.darkGreen else Pal.ink, align = TextAlign.Center, modifier = Modifier.weight(1f).padding(top = 8.dp))
-        }
-    }
-}
