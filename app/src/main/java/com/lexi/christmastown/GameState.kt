@@ -62,7 +62,55 @@ sealed interface Overlay {
     val jobs: List<Job> = jobsFor(1),
     val kids: List<Kid> = makeKids(5),
     val kidIndex: Int = 0,
+    // Phone chats
+    val chats: Map<String, List<ChatMsg>> = emptyMap(),
+    val lastRead: Map<String, Long> = emptyMap(),
+    val lastGroupVisit: Long = 0,
+    val memory: Map<String, String> = emptyMap(),
+    // Settings
+    val musicOn: Boolean = true,
+    val soundOn: Boolean = true,
+    // Expansion (all with defaults so older saves still load)
+    val wrapped: Int = 0,
+    val townTree: List<Ornament> = emptyList(),
+    val snowballDay: Int = 0,
+    val gingerHouses: Int = 0,
+    val pets: List<Pet> = emptyList(),
+    val washed: Set<String> = emptySet(),
+    val decos: Set<Deco> = emptySet(),
+    val reindeerDecos: Map<String, Set<Deco>> = emptyMap(),
+    val team: List<String> = emptyList(),
+    val adventYear: Int = 0,
+    val adventOpened: Set<Int> = emptySet(),
+    val stickers: Set<String> = emptySet(),
+    val stickersSeen: Int = 0,
+    val prizesClaimed: Set<Int> = emptySet(),
+    // House & main pet (follow-up)
+    val floors: Int = START_FLOORS,
+    val mainPet: Long = 0,
 )
+
+/** Stickers you've earned just by what's in your save (things you own, pets, friends...). */
+fun Save.withStickers(): Save {
+    val earned = buildSet {
+        cookies.filter { it.value > 0 }.keys.forEach { add("cookie:${it.name}") }
+        toys.filter { it.value > 0 }.keys.forEach { add("toy:${it.name}") }
+        (fed intersect brushed intersect washed).forEach { add("deer:$it") }
+        pets.forEach { add("pet:${it.kind.name}") }
+        owned.filter { it.value > 0 }.keys.forEach { add("item:${it.name}") }
+        if (wrapped > 0) add("wrap")
+        if (gingerHouses > 0) add("ginger")
+        if (townTree.isNotEmpty()) add("tree")
+        if (bestGifts.isNotEmpty()) add("friend")
+        if (levelFor(workdays) >= MAX_LEVEL) add("level8")
+        if (christmasDone) add("christmas")
+        if (adventOpened.isNotEmpty()) add("advent")
+    }
+    return if (stickers.containsAll(earned)) this else copy(stickers = stickers + earned)
+}
+
+/** One ornament hung on the Town Tree (x/y are fractions of the tree picture). */
+@Serializable data class Ornament(val kind: Int, val color: Int, val x: Float, val y: Float)
 
 fun <K> Map<K, Int>.n(k: K) = this[k] ?: 0
 fun <K> Map<K, Int>.add(k: K, d: Int) = this + (k to (n(k) + d))
@@ -74,7 +122,8 @@ class GameState(private val prefs: SharedPreferences) {
         private set
 
     // Right-now stuff (not saved)
-    var place by mutableStateOf(Place.Home)
+    /** null = the main screen (your living room). */
+    var place by mutableStateOf<Place?>(null)
     var overlay by mutableStateOf<Overlay>(Overlay.None)
     var toast by mutableStateOf<String?>(null)
     var showCreator by mutableStateOf(false)
@@ -83,6 +132,8 @@ class GameState(private val prefs: SharedPreferences) {
     var christmasEveRide by mutableStateOf(false)
     var selectedSeed by mutableStateOf(Crop.Wheat)
     var now by mutableLongStateOf(System.currentTimeMillis())
+    /** A mini-game can ask for its own song while it's on screen. */
+    var gameSong by mutableStateOf<Music?>(null)
     private var toastUntil = 0L
 
     val level get() = levelFor(s.workdays)
@@ -92,13 +143,13 @@ class GameState(private val prefs: SharedPreferences) {
     val jobsDone get() = s.jobs.count { it.finished }
 
     private fun update(change: Save.() -> Save) {
-        s = s.change()
+        s = s.change().withStickers()
         prefs.edit().putString("save", json.encodeToString(s)).apply()
     }
 
-    private fun load(): Save = prefs.getString("save", null)?.let {
+    private fun load(): Save = (prefs.getString("save", null)?.let {
         runCatching { json.decodeFromString<Save>(it) }.getOrNull()
-    } ?: Save()
+    } ?: Save()).withStickers()
 
     fun tick() {
         now = System.currentTimeMillis()
@@ -115,10 +166,22 @@ class GameState(private val prefs: SharedPreferences) {
     private fun useEnergy(amount: Int): Boolean {
         if (s.energy < amount) {
             say("Too tired! 😴 Eat a cookie or some food, or go to sleep.")
+            Audio.play(Sfx.Oops)
             return false
         }
         update { copy(energy = energy - amount) }
         return true
+    }
+
+    /** Uses energy for a mini-game (shows "too tired" if you can't). */
+    fun spend(amount: Int): Boolean = useEnergy(amount)
+
+    /** Checks (without using) energy, so mini-games can start only if you can finish them. */
+    fun hasEnergy(amount: Int): Boolean {
+        if (s.energy >= amount) return true
+        say("Too tired! 😴 Eat a cookie or some food, or go to sleep.")
+        Audio.play(Sfx.Oops)
+        return false
     }
 
     fun eat(food: Food) {
@@ -147,6 +210,7 @@ class GameState(private val prefs: SharedPreferences) {
         val before = level
         update { copy(money = money + PAY, paidToday = true, workdays = workdays + 1) }
         overlay = Overlay.Paid(if (level > before) level else null)
+        Audio.play(if (level > before) Sfx.LevelUp else Sfx.Coins)
         if (level >= 3) update { copy(plots = plots + (plots.size until 9).map { Plot(it) }) }
     }
 
@@ -159,10 +223,12 @@ class GameState(private val prefs: SharedPreferences) {
         update {
             copy(
                 day = day + 1, energy = 100, paidToday = false, fed = emptySet(), brushed = emptySet(),
-                talkedToday = emptySet(), jobs = jobsFor(levelFor(workdays)), kids = makeKids(5), kidIndex = 0,
+                talkedToday = emptySet(), jobs = jobsFor(levelFor(workdays)), kids = makeKids(listOf(5, 5, 5, 5, 5, 5, 6, 6)[levelFor(workdays) - 1]), kidIndex = 0,
+                washed = emptySet(),
             )
         }
         overlay = Overlay.Morning(s.day, worked)
+        place = null
     }
 
     // MARK: Greenhouse
@@ -172,15 +238,17 @@ class GameState(private val prefs: SharedPreferences) {
         when (plot.stage(System.currentTimeMillis())) {
             0 -> {
                 val c = selectedSeed
-                if (s.seeds.n(c) <= 0) { say("No ${c.title.lowercase()} seeds! Buy some at the Shop 🛍️"); return }
+                if (s.seeds.n(c) <= 0) { say("No ${c.title.lowercase()} seeds! Buy some at the Shop 🛍️"); Audio.play(Sfx.Oops); return }
+                Audio.play(Sfx.Pop)
                 update { copy(seeds = seeds.add(c, -1), plots = plots.map { if (it.id == id) it.copy(crop = c) else it }) }
             }
-            1 -> update { copy(plots = plots.map { if (it.id == id) it.copy(wateredAt = System.currentTimeMillis()) else it }) }
+            1 -> { update { copy(plots = plots.map { if (it.id == id) it.copy(wateredAt = System.currentTimeMillis()) else it }) }; Audio.play(Sfx.Tap) }
             2 -> say("Still growing… 🌱")
             3 -> {
                 val c = plot.crop!!
                 update { copy(crops = crops.add(c, HARVEST), plots = plots.map { if (it.id == id) Plot(id) else it }) }
                 say("Picked $HARVEST ${c.plural}!")
+                Audio.play(Sfx.Pop)
             }
         }
     }
@@ -217,13 +285,14 @@ class GameState(private val prefs: SharedPreferences) {
     fun canBake(c: Cookie) = c.recipe.all { (crop, n) -> s.crops.n(crop) >= n }
 
     fun bake(c: Cookie): Boolean {
-        if (!canBake(c)) { say("Not enough ingredients! Grow some in the Greenhouse 🌱"); return false }
+        if (!canBake(c)) { say("Not enough ingredients! Grow some in the Greenhouse 🌱"); Audio.play(Sfx.Oops); return false }
         if (!useEnergy(5)) return false
         update {
             var cr = crops
             c.recipe.forEach { (crop, n) -> cr = cr.add(crop, -n) }
             copy(crops = cr, cookies = cookies.add(c, 1))
         }
+        Audio.play(Sfx.Ding)
         progress(JobKind.Bake)
         return true
     }
@@ -235,6 +304,7 @@ class GameState(private val prefs: SharedPreferences) {
     fun finishToy(t: Toy) {
         update { copy(toys = toys.add(t, 1)) }
         say("You made a ${t.title}! 🎁")
+        Audio.play(Sfx.Ding)
         progress(JobKind.Toys)
     }
 
@@ -242,10 +312,11 @@ class GameState(private val prefs: SharedPreferences) {
 
     fun feed(name: String) {
         if (name in s.fed) { say("$name is full! 🥕"); return }
-        if (s.crops.n(Crop.Carrot) <= 0) { say("No carrots! Grow some in the Greenhouse 🥕"); return }
+        if (s.crops.n(Crop.Carrot) <= 0) { say("No carrots! Grow some in the Greenhouse 🥕"); Audio.play(Sfx.Oops); return }
         if (!useEnergy(2)) return
         update { copy(fed = fed + name, crops = crops.add(Crop.Carrot, -1)) }
         say("$name munches happily! 🥕")
+        Audio.play(Sfx.Munch)
         checkReindeer()
     }
 
@@ -254,6 +325,7 @@ class GameState(private val prefs: SharedPreferences) {
         if (!useEnergy(2)) return
         update { copy(brushed = brushed + name) }
         say("$name looks so shiny! ✨")
+        Audio.play(Sfx.SleighBells)
         checkReindeer()
     }
 
@@ -271,19 +343,22 @@ class GameState(private val prefs: SharedPreferences) {
         if (!useEnergy(1)) return true
         update { copy(kidIndex = kidIndex + 1) }
         progress(JobKind.SortList)
+        Audio.play(if (kid.nice == nice) Sfx.Ding else Sfx.Oops)
         return kid.nice == nice
     }
 
     // MARK: Delivery
 
-    val presents get() = s.toys.values.sum()
+    val presents get() = s.toys.values.sum() + s.wrapped
 
-    /** Uses one toy (or one of Santa's on Christmas Eve). */
+    /** Uses one present: a wrapped one first, then a plain toy (or one of Santa's on Christmas Eve). */
     fun deliver(): Boolean {
-        if (christmasEveRide) return true
+        if (christmasEveRide) { Audio.play(Sfx.PresentDrop); return true }
         val toy = s.toys.entries.firstOrNull { it.value > 0 }?.key
-        if (toy == null) { say("No presents left! Make toys in the Workshop 🧸"); return false }
-        update { copy(toys = toys.add(toy, -1)) }
+        if (s.wrapped > 0) update { copy(wrapped = wrapped - 1) }
+        else if (toy != null) update { copy(toys = toys.add(toy, -1)) }
+        else { say("No presents left! Make toys in the Workshop 🧸"); Audio.play(Sfx.Oops); return false }
+        Audio.play(Sfx.PresentDrop)
         progress(JobKind.Deliver)
         return true
     }
@@ -294,7 +369,7 @@ class GameState(private val prefs: SharedPreferences) {
             job == null -> say("Deliveries start at Level 3! 🛷")
             job.finished -> say("All of today's presents are delivered! 🎉")
             !useEnergy(10) -> {}
-            else -> delivering = true
+            else -> { delivering = true; Audio.play(Sfx.SleighBells) }
         }
     }
 
@@ -302,6 +377,7 @@ class GameState(private val prefs: SharedPreferences) {
         overlay = Overlay.None
         christmasEveRide = true
         delivering = true
+        Audio.play(Sfx.SleighBells)
     }
 
     fun endDelivery(finishedChristmas: Boolean) {
@@ -315,11 +391,161 @@ class GameState(private val prefs: SharedPreferences) {
         }
     }
 
+    // MARK: Reindeer care (wash, decorate, harness)
+
+    fun wash(name: String) {
+        if (name in s.washed) return
+        if (!useEnergy(2)) return
+        update { copy(washed = washed + name) }
+        say("$name is squeaky clean! 🛁")
+        Audio.play(Sfx.Ding)
+    }
+
+    fun decosOn(name: String) = s.reindeerDecos[name].orEmpty()
+
+    fun buyDeco(d: Deco) {
+        if (d in s.decos) return
+        if (pay(d.price)) { update { copy(decos = decos + d) }; say("You got ${d.title}! ${d.emoji} Tap it to put it on a reindeer.") }
+    }
+
+    fun toggleDeco(name: String, d: Deco) {
+        if (d !in s.decos) { buyDeco(d); if (d !in s.decos) return }
+        val on = decosOn(name)
+        update { copy(reindeerDecos = reindeerDecos + (name to (if (d in on) on - d else on + d))) }
+        Audio.play(Sfx.SleighBells)
+    }
+
+    /** The reindeer pulling the sleigh (up to [TEAM_SIZE]). If you never picked, the first ones go. */
+    val sleighTeam get() = s.team.filter { it in reindeer }.ifEmpty { reindeer.take(TEAM_SIZE) }
+
+    fun toggleTeam(name: String) {
+        val t = s.team.filter { it in reindeer }
+        when {
+            name in t -> update { copy(team = t - name) }
+            t.size >= TEAM_SIZE -> { say("The sleigh only fits $TEAM_SIZE reindeer! Unhitch one first."); Audio.play(Sfx.Oops) }
+            else -> { update { copy(team = t + name) }; say("$name is hitched to the sleigh! 🛷"); Audio.play(Sfx.SleighBells) }
+        }
+    }
+
+    /** 0..TEAM_SIZE: how many sleigh reindeer are fed and brushed today. Happy reindeer steer better. */
+    val teamPower get() = sleighTeam.count { it in s.fed && it in s.brushed }
+
+    // MARK: Wrapping presents
+
+    fun startWrap(toy: Toy): Boolean {
+        if (s.toys.n(toy) <= 0) { say("You don't have a ${toy.title}! Make one in the Workshop 🧸"); Audio.play(Sfx.Oops); return false }
+        return hasEnergy(3)
+    }
+
+    fun finishWrap(toy: Toy) {
+        if (s.toys.n(toy) <= 0 || !useEnergy(3)) return
+        update { copy(toys = toys.add(toy, -1), wrapped = wrapped + 1) }
+        say("A beautiful present! 🎁 Wrapped presents go on the sleigh first.")
+        Audio.play(Sfx.Ding)
+        progress(JobKind.Wrap)
+    }
+
+    // MARK: Gingerbread house
+
+    val gingerRecipe = mapOf(Crop.Wheat to 3)
+    fun canBuildHouse() = gingerRecipe.all { (c, n) -> s.crops.n(c) >= n }
+
+    fun finishGingerHouse() {
+        if (!canBuildHouse() || !useEnergy(5)) return
+        update {
+            var cr = crops
+            gingerRecipe.forEach { (c, n) -> cr = cr.add(c, -n) }
+            copy(crops = cr, owned = owned.add(Item.GingerbreadHouse, 1), gingerHouses = gingerHouses + 1)
+        }
+        say("Your gingerbread house is in storage. Put it out at Home! 🏠")
+        Audio.play(Sfx.LevelUp)
+    }
+
+    // MARK: Town tree
+
+    fun finishTree(ornaments: List<Ornament>) {
+        update { copy(townTree = ornaments) }
+        say("The Town Tree looks AMAZING! 🎄✨")
+        Audio.play(Sfx.LevelUp)
+        progress(JobKind.Tree)
+    }
+
+    // MARK: Snowball fight
+
+    /** Friends you play with get a little closer (once a day). */
+    fun snowballDone(hits: Int, friends: List<Npc>) {
+        if (s.snowballDay != s.day && hits >= 3) {
+            update { copy(snowballDay = day, hearts = friends.fold(hearts) { h, f -> h.add(f.name, 1) }.mapValues { it.value.coerceAtMost(5) }) }
+            say("What a snowball fight! Your friends had a blast 💖")
+            friends.forEach { checkBestFriend(it) }
+        } else say(if (hits >= 3) "Snow much fun! ❄️" else "Brrr! Try again and hit 3 friends! ❄️")
+    }
+
+    // MARK: Pets
+
+    fun buyPet(kind: PetKind) {
+        if (pay(kind.price)) {
+            val name = (petNames - s.pets.map { it.name }.toSet()).randomOrNull() ?: petNames.random()
+            val id = (s.pets.maxOfOrNull { it.id } ?: 0) + 1
+            update { copy(pets = pets + Pet(id, kind, name, fedAt = System.currentTimeMillis(), washedAt = System.currentTimeMillis())) }
+            say("Meet $name the ${kind.title}! ${kind.noise} 💖")
+        }
+    }
+
+    private fun petCare(id: Long, change: Pet.(Long) -> Pet) {
+        val t = System.currentTimeMillis()
+        update { copy(pets = pets.map { if (it.id == id) it.change(t) else it }) }
+        val pet = s.pets.firstOrNull { it.id == id } ?: return
+        // Good care reward: a little gift once a day when every meter is high.
+        if (pet.fullness(t) > 0.8f && pet.cleanness(t) > 0.8f && pet.happiness(t) > 0.8f && pet.giftDay != s.day) {
+            val gift = listOf(Food.Candy, Food.HotCocoa, Food.Candy).random()
+            update { copy(pets = pets.map { if (it.id == id) it.copy(giftDay = day) else it }, food = food.add(gift, 1)) }
+            say("${pet.name} is SO happy, they found you a ${gift.title}! 🎁")
+            Audio.play(Sfx.Coins)
+        }
+    }
+
+    fun feedPet(id: Long) = petCare(id) { copy(fedAt = it) }
+    fun washPet(id: Long) = petCare(id) { copy(washedAt = it) }
+    fun cuddlePet(id: Long) = petCare(id) { copy(pettedAt = it) }
+
+    // MARK: Advent calendar
+
+    private val today get() = java.time.LocalDate.now()
+    /** Doors you may open: 1..today in December (none before Dec 1). Missed days can still be opened. */
+    val adventDay get() = if (today.monthValue == 12) today.dayOfMonth.coerceAtMost(24) else 0
+    val daysToAdvent get() = if (today.monthValue == 12) 0 else java.time.temporal.ChronoUnit.DAYS.between(today, java.time.LocalDate.of(today.year, 12, 1)).toInt()
+    val adventOpenedThisYear get() = if (s.adventYear == today.year) s.adventOpened else emptySet()
+
+    fun openAdvent(door: Int): Surprise? {
+        if (door > adventDay || door in adventOpenedThisYear) return null
+        val gift = adventSurprises[door - 1]
+        val year = today.year
+        update { gift.give(copy(adventYear = year, adventOpened = (if (adventYear == year) adventOpened else emptySet()) + door)) }
+        Audio.play(Sfx.LevelUp)
+        return gift
+    }
+
+    // MARK: Sticker book
+
+    fun sticker(id: String) { if (id !in s.stickers) update { copy(stickers = stickers + id) } }
+    val newStickers get() = (s.stickers.size - s.stickersSeen).coerceAtLeast(0)
+    fun sawStickers() { if (s.stickersSeen != s.stickers.size) update { copy(stickersSeen = stickers.size) } }
+
+    fun claimPrize(at: Int) {
+        val prize = stickerPrizes.firstOrNull { it.first == at } ?: return
+        if (s.stickers.size < at || at in s.prizesClaimed) return
+        update { prize.second.give(copy(prizesClaimed = prizesClaimed + at)) }
+        say("Sticker prize: ${prize.second.title}! 🎁")
+        Audio.play(Sfx.LevelUp)
+    }
+
     // MARK: Shop
 
     private fun pay(price: Int): Boolean {
-        if (s.money < price) { say("Not enough money! 💸 Work for Santa to earn \$1,000 a day."); return false }
+        if (s.money < price) { say("Not enough money! 💸 Work for Santa to earn \$1,000 a day."); Audio.play(Sfx.Oops); return false }
         update { copy(money = money - price) }
+        Audio.play(Sfx.Coins)
         return true
     }
 
@@ -356,7 +582,32 @@ class GameState(private val prefs: SharedPreferences) {
         copy(placed = placed.map { if (it.id == id) it.copy(x = x.coerceIn(0.04f, 0.96f), y = y.coerceIn(0f, 0.7f)) else it })
     }
 
-    fun switchFloor(id: Long) = update { copy(placed = placed.map { if (it.id == id) it.copy(floor = 1 - it.floor) else it }) }
+    /** Moves a thing to the next floor up (and back to the bottom from the top). */
+    fun switchFloor(id: Long) = update { copy(placed = placed.map { if (it.id == id) it.copy(floor = (it.floor + 1) % floors) else it }) }
+
+    // MARK: House upgrades & where the pets are
+
+    val nextRoom get() = rooms.getOrNull(s.floors)
+
+    fun upgradeHouse() {
+        val room = nextRoom ?: return
+        if (pay(room.price)) {
+            update { copy(floors = floors + 1) }
+            say("Your house has a new ${room.title}! ${room.emoji} Tap it in Decorate to look inside.")
+            Audio.play(Sfx.LevelUp)
+        }
+    }
+
+    /** Your main pet (the one by your side on the main screen). Defaults to your first pet. */
+    val mainPet get() = s.pets.firstOrNull { it.id == s.mainPet } ?: s.pets.firstOrNull()
+
+    fun setMainPet(id: Long) { update { copy(mainPet = id) }; s.pets.firstOrNull { it.id == id }?.let { say("${it.name} is your main pet now! ⭐ ${it.kind.noise}") } }
+
+    /** Other pets wander from room to room: each one picks a new room every 20 minutes. */
+    fun petRoom(pet: Pet, now: Long = this.now): Int =
+        if (pet.id == mainPet?.id) 0 else ((now / 1_200_000 + pet.id * 7) % s.floors).toInt()
+
+    fun petsIn(floor: Int) = s.pets.filter { it.id != mainPet?.id && petRoom(it) == floor }
     fun putAway(id: Long) = update { copy(placed = placed.filter { it.id != id }) }
 
     // MARK: Elf friends
@@ -373,6 +624,7 @@ class GameState(private val prefs: SharedPreferences) {
         if (cookie == null) { say("You don't have any cookies! Bake some 🍪"); return }
         update { copy(cookies = cookies.add(cookie, -1), hearts = hearts.add(npc.name, 2).mapValues { it.value.coerceAtMost(5) }) }
         say("${npc.name} loves the ${cookie.title}! 💖")
+        Audio.play(Sfx.Ding)
         checkBestFriend(npc)
     }
 
@@ -388,5 +640,62 @@ class GameState(private val prefs: SharedPreferences) {
         say("Best party ever! 🎉 You got a ${reward.title} for your house!")
     }
 
-    fun go(p: Place) { place = p }
+    fun go(p: Place?) { place = p }
+
+    fun toggleMusic() { update { copy(musicOn = !musicOn) }; Audio.musicOn = s.musicOn }
+    fun toggleSound() { update { copy(soundOn = !soundOn) }; Audio.soundOn = s.soundOn; Audio.play(Sfx.Tap) }
+
+    // MARK: Phone
+
+    /** Elves you've met (talked to in Friends) are in your phone. */
+    val met get() = npcs.filter { s.hearts.n(it.name) > 0 }.map { it.name }
+
+    fun messages(thread: String) = s.chats[thread].orEmpty()
+
+    fun unread(thread: String) = messages(thread).count { it.from != ME && it.time > s.lastRead.n(thread).toLong() }
+
+    private fun Map<String, Long>.n(k: String) = this[k] ?: 0L
+
+    /** The group chat feels "live": time passes while you're away, so there are new messages when you look. */
+    val groupHasNews get() = met.isNotEmpty() && System.currentTimeMillis() - s.lastGroupVisit > 120_000
+
+    fun remember(key: String, value: String) = update { copy(memory = memory + (key to value)) }
+
+    fun post(thread: String, msgs: List<ChatMsg>) {
+        if (msgs.isEmpty()) return
+        if (msgs.any { it.from != ME }) Audio.play(Sfx.Message)
+        update { copy(chats = chats + (thread to (chats[thread].orEmpty() + msgs).takeLast(80))) }
+    }
+
+    fun markRead(thread: String) = update { copy(lastRead = lastRead + (thread to System.currentTimeMillis())) }
+
+    /** Called when you open the group chat: 1–3 things happened while you were away. */
+    fun openGroup() {
+        val now = System.currentTimeMillis()
+        val since = s.lastGroupVisit
+        when {
+            met.isEmpty() -> {}
+            since == 0L -> post(GROUP, met.mapIndexed { i, n -> ChatMsg(n, listOf("Welcome to the group chat, ${s.name}! 🎄", "Yay, ${s.name} is here!! ✨", "Hi hi hi! 👋", "Hello! 🦌").random(), now - (met.size - i) * 30_000L) })
+            now - since > 60_000 -> {
+                val count = if (now - since > 30 * 60_000) 3 else (1..3).random()
+                post(GROUP, ElfBrain.groupEvents(this, met, since, now, count))
+            }
+        }
+        update { copy(lastGroupVisit = now) }
+    }
+
+    /** While you're watching, the chat sometimes keeps going. */
+    fun liveGroupEvent() {
+        val now = System.currentTimeMillis()
+        post(GROUP, ElfBrain.groupEvents(this, met, now - 30_000, now, 1).map { it.copy(time = minOf(it.time, now)) })
+        update { copy(lastGroupVisit = now) }
+    }
+
+    /** Checks what you typed. Returns the cleaned text and, if needed, the elf's safety reply. */
+    fun cleanMessage(text: String) = ChatFilter.check(text)
+
+    /** Elves get a little friendlier when you chat (once a day each). */
+    fun chatFriendship(elf: String) {
+        npcs.firstOrNull { it.name == elf }?.let { chat(it) }
+    }
 }

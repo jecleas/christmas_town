@@ -2,7 +2,15 @@ package com.lexi.christmastown
 
 import android.content.Context
 import android.graphics.Bitmap
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -88,6 +96,39 @@ object Sprites {
         look.hat.sprite?.let { rows = overlay(rows, rows(it)) }
         return bitmap("elf|$look", rows, elfColors(look))
     }
+
+    // MARK: Reindeer (with their decorations)
+
+    fun reindeer(name: String, decos: Set<Deco>): ImageBitmap {
+        var rows = rows("reindeer")
+        for (d in Deco.entries) if (d in decos) rows = overlay(rows, rows(d.sprite))
+        val nose = if (name == "Rudolph") hex(0xFF2E3E) else hex(0x2B1D2E)
+        return bitmap("rd|${name == "Rudolph"}|${decos.sorted()}", rows, mapOf('N' to nose))
+    }
+}
+
+/** A reindeer with its decorations. Rudolph's nose glows (and pulses). */
+@Composable
+fun ReindeerPx(name: String, decos: Set<Deco>, height: Dp, modifier: Modifier = Modifier, flip: Boolean = false) {
+    val img = Sprites.reindeer(name, decos)
+    val glow = if (name == "Rudolph") {
+        val t = rememberInfiniteTransition(label = "nose")
+        t.animateFloat(0.45f, 1f, infiniteRepeatable(tween(600), RepeatMode.Reverse), label = "nose").value
+    } else 0f
+    val width = height * (img.width.toFloat() / img.height)
+    Canvas(modifier.size(width, height).graphicsLayer { if (flip) scaleX = -1f }) {
+        val px = size.height / img.height
+        val nose = Offset(1.5f * px, 7.5f * px)
+        if (glow > 0f) drawCircle(Brush.radialGradient(listOf(hex(0xFF4050).copy(alpha = 0.7f * glow), Color.Transparent), nose, px * 6 * (0.8f + glow * 0.4f)), px * 6 * (0.8f + glow * 0.4f), nose)
+        drawImage(img, srcOffset = IntOffset.Zero, srcSize = IntSize(img.width, img.height), dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()), filterQuality = FilterQuality.None)
+        if (glow > 0f) drawCircle(Color.White.copy(alpha = 0.6f * glow), px * 0.6f, nose + Offset(-0.2f * px, -0.3f * px))
+    }
+}
+
+/** Draws a sprite inside a Canvas (for the fast mini-games), [h] tall in pixels, top-left at [at]. */
+fun androidx.compose.ui.graphics.drawscope.DrawScope.sprite(img: ImageBitmap, at: Offset, h: Float, alpha: Float = 1f) {
+    val w = h * img.width / img.height
+    drawImage(img, srcOffset = IntOffset.Zero, srcSize = IntSize(img.width, img.height), dstOffset = IntOffset(at.x.roundToInt(), at.y.roundToInt()), dstSize = IntSize(w.roundToInt(), h.roundToInt()), alpha = alpha, filterQuality = FilterQuality.None)
 }
 
 /**

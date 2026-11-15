@@ -19,10 +19,20 @@ class MainActivity : ComponentActivity() {
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
         Sprites.load(this)
+        Audio.init(this)
         val prefs = getSharedPreferences("christmas-town", Context.MODE_PRIVATE)
         setContent {
-            val game = remember { GameState(prefs) }
+            val game = remember {
+                GameState(prefs).also {
+                    Audio.soundOn = it.s.soundOn
+                    Audio.musicOn = it.s.musicOn
+                }
+            }
             GameApp(game)
         }
     }
+
+    // Go quiet when the app is in the background (home button, phone call...).
+    override fun onPause() { super.onPause(); Audio.onPause() }
+    override fun onResume() { super.onResume(); Audio.onResume() }
 }
