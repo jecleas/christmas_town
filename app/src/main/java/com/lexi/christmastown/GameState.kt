@@ -85,6 +85,9 @@ sealed interface Overlay {
     val stickers: Set<String> = emptySet(),
     val stickersSeen: Int = 0,
     val prizesClaimed: Set<Int> = emptySet(),
+    // House & main pet (follow-up)
+    val floors: Int = START_FLOORS,
+    val mainPet: Long = 0,
 )
 
 /** Stickers you've earned just by what's in your save (things you own, pets, friends...). */
@@ -579,7 +582,32 @@ class GameState(private val prefs: SharedPreferences) {
         copy(placed = placed.map { if (it.id == id) it.copy(x = x.coerceIn(0.04f, 0.96f), y = y.coerceIn(0f, 0.7f)) else it })
     }
 
-    fun switchFloor(id: Long) = update { copy(placed = placed.map { if (it.id == id) it.copy(floor = 1 - it.floor) else it }) }
+    /** Moves a thing to the next floor up (and back to the bottom from the top). */
+    fun switchFloor(id: Long) = update { copy(placed = placed.map { if (it.id == id) it.copy(floor = (it.floor + 1) % floors) else it }) }
+
+    // MARK: House upgrades & where the pets are
+
+    val nextRoom get() = rooms.getOrNull(s.floors)
+
+    fun upgradeHouse() {
+        val room = nextRoom ?: return
+        if (pay(room.price)) {
+            update { copy(floors = floors + 1) }
+            say("Your house has a new ${room.title}! ${room.emoji} Tap it in Decorate to look inside.")
+            Audio.play(Sfx.LevelUp)
+        }
+    }
+
+    /** Your main pet (the one by your side on the main screen). Defaults to your first pet. */
+    val mainPet get() = s.pets.firstOrNull { it.id == s.mainPet } ?: s.pets.firstOrNull()
+
+    fun setMainPet(id: Long) { update { copy(mainPet = id) }; s.pets.firstOrNull { it.id == id }?.let { say("${it.name} is your main pet now! ⭐ ${it.kind.noise}") } }
+
+    /** Other pets wander from room to room: each one picks a new room every 20 minutes. */
+    fun petRoom(pet: Pet, now: Long = this.now): Int =
+        if (pet.id == mainPet?.id) 0 else ((now / 1_200_000 + pet.id * 7) % s.floors).toInt()
+
+    fun petsIn(floor: Int) = s.pets.filter { it.id != mainPet?.id && petRoom(it) == floor }
     fun putAway(id: Long) = update { copy(placed = placed.filter { it.id != id }) }
 
     // MARK: Elf friends

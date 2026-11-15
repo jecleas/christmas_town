@@ -22,6 +22,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -80,7 +82,7 @@ fun HubScreen(game: GameState) {
 
         // Living room with the activity icons down both sides
         Box(Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(12.dp))) {
-            LivingRoom(game)
+            RoomScene(game, 0, hub = true)
             Column(Modifier.align(Alignment.TopStart).padding(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 for (p in Place.entries.filter { it.side == Side.Left }) Icon(game, p)
             }
@@ -182,20 +184,24 @@ private fun Icon(game: GameState, p: Place) {
     }
 }
 
-/** Your downstairs room, big: the decorations you placed, your elf, a reindeer buddy, and a table of goodies. */
+/**
+ * One room of your house, big. On the main screen ([hub]) it's the living room with your elf, your main pet,
+ * a reindeer buddy and a table of goodies. Zoomed in from Decorate it shows the pets in that room and what's going on.
+ */
 @Composable
-private fun LivingRoom(game: GameState) {
+fun RoomScene(game: GameState, floor: Int, hub: Boolean) {
     val s = game.s
+    val room = rooms[floor.coerceIn(0, rooms.size - 1)]
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val w = maxWidth.value
         val h = maxHeight.value
         val floorY = h * 0.66f
         Canvas(Modifier.fillMaxSize()) {
             val u = density
-            drawRect(hex(0xE3F0D8))
+            drawRect(hex(room.wall))
             var x = 0f
-            while (x < w) { drawRect(hex(0xD3E6C4), Offset(x * u, 0f), Size(12 * u, floorY * u)); x += 44f }
-            // window with falling snow
+            while (x < w) { drawRect(hex(room.stripe), Offset(x * u, 0f), Size(12 * u, floorY * u)); x += 44f }
+            // window with falling snow (a round one in the loft)
             val wx = w / 2 - 60; val wy = 30f
             drawRect(Pal.ink, Offset((wx - 5) * u, (wy - 5) * u), Size(130 * u, 110 * u))
             drawRect(hex(0x1D2B53), Offset(wx * u, wy * u), Size(120 * u, 100 * u))
@@ -212,7 +218,7 @@ private fun LivingRoom(game: GameState) {
         }
 
         val pixel = 3.2f
-        val items = s.placed.filter { it.floor == 0 }.sortedBy { it.item.spot != Spot.Rug }
+        val items = s.placed.filter { it.floor == floor }.sortedBy { it.item.spot != Spot.Rug }
         for (p in items) {
             val img = Sprites.named(p.item.sprite)
             val iw = img.width * pixel
@@ -226,32 +232,68 @@ private fun LivingRoom(game: GameState) {
             Box(Modifier.offset((cx - iw / 2).dp, top.dp)) { Px(img, ih.dp) }
         }
 
-        // Your elf and a baby reindeer buddy
-        Box(Modifier.align(Alignment.BottomCenter).padding(bottom = (h - floorY - 70).coerceAtLeast(0f).dp)) {
-            Row(verticalAlignment = Alignment.Bottom) {
-                Bob(4f, 900) { ElfPx(s.look, 200.dp) }
-                val buddy = game.sleighTeam.firstOrNull() ?: "Dasher"
-                Bob(3f, 650) { ReindeerPx(buddy, game.decosOn(buddy), 54.dp) }
+        if (hub) {
+            // Your elf, your main pet and a baby reindeer buddy
+            Box(Modifier.align(Alignment.BottomCenter).padding(bottom = (h - floorY - 70).coerceAtLeast(0f).dp)) {
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Bob(4f, 900) { ElfPx(s.look, 200.dp) }
+                    val buddy = game.sleighTeam.firstOrNull() ?: "Dasher"
+                    Bob(3f, 650) { ReindeerPx(buddy, game.decosOn(buddy), 54.dp) }
+                }
+            }
+            // Your main pet sits on the floor right in front of you
+            game.mainPet?.let { pet ->
+                Box(Modifier.align(Alignment.BottomCenter).padding(bottom = (h - floorY - 104).coerceAtLeast(0f).dp).offset(x = 56.dp)) { MainPet(pet) }
             }
         }
 
-        // Your pets wander around (tap them!)
-        s.pets.take(3).forEachIndexed { i, pet -> WanderingPet(pet, w, floorY + 40, i, game.now) }
+        // The other pets wander around this room (tap them!)
+        val here = game.petsIn(floor)
+        here.take(4).forEachIndexed { i, pet -> WanderingPet(pet, w, floorY + 40, i, game.now) }
 
-        // Table of today's goodies
-        Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            val goodies = Cookie.entries.flatMap { c -> List(minOf(s.cookies.n(c), 3)) { c.sprite } } +
-                Toy.entries.flatMap { t -> List(minOf(s.toys.n(t), 2)) { t.sprite } }
-            Row(Modifier.height(38.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                if (goodies.isEmpty()) Txt("Bake cookies & make toys!", 13, Color.White, modifier = Modifier.background(Pal.ink.copy(alpha = 0.6f), RoundedCornerShape(5.dp)).padding(horizontal = 6.dp))
-                for (g in goodies.take(7)) Px(g, 34.dp)
+        if (hub) {
+            // Table of today's goodies
+            Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                val goodies = Cookie.entries.flatMap { c -> List(minOf(s.cookies.n(c), 3)) { c.sprite } } +
+                    Toy.entries.flatMap { t -> List(minOf(s.toys.n(t), 2)) { t.sprite } }
+                Row(Modifier.height(38.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    if (goodies.isEmpty()) Txt("Bake cookies & make toys!", 13, Color.White, modifier = Modifier.background(Pal.ink.copy(alpha = 0.6f), RoundedCornerShape(5.dp)).padding(horizontal = 6.dp))
+                    for (g in goodies.take(7)) Px(g, 34.dp)
+                }
+                Box(Modifier.size(250.dp, 16.dp).panel(hex(0xC98B5E), radius = 5.dp))
             }
-            Box(Modifier.size(250.dp, 16.dp).panel(hex(0xC98B5E), radius = 5.dp))
+        } else {
+            // What's happening in here?
+            val hour = game.now / 1_200_000
+            val news = here.map { petHappenings[((it.id + hour) % petHappenings.size).toInt()].format(it.name) } +
+                roomHappenings[floor.coerceIn(0, roomHappenings.size - 1)]
+            Column(Modifier.align(Alignment.TopStart).padding(8.dp).width(220.dp).panel(Color.White.copy(alpha = 0.92f)).padding(8.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Txt("${room.emoji} ${room.title}", 15, Pal.red)
+                for (line in news) Txt(line, 12)
+                if (here.isEmpty() && s.pets.isNotEmpty()) Txt("No pets in here right now. They move around! 🐾", 12, Pal.brown)
+            }
         }
     }
 }
 
-// MARK: - Decorate (the two-story house)
+/** Your main pet sits next to you on the main screen and reacts when you tap it. */
+@Composable
+private fun MainPet(pet: Pet) {
+    var said by remember { mutableStateOf<String?>(null) }
+    var hops by remember { mutableIntStateOf(0) }
+    val jump = remember { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(hops) { if (hops > 0) { jump.snapTo(1f); jump.animateTo(0f, androidx.compose.animation.core.tween(400)) } }
+    LaunchedEffect(said) { if (said != null) { kotlinx.coroutines.delay(2000); said = null } }
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        said?.let { Txt(it, 11, align = TextAlign.Center, modifier = Modifier.width(110.dp).panel(Color.White, radius = 6.dp).padding(3.dp)) }
+        Box(Modifier.graphicsLayer { translationY = -jump.value * 30 * density }.squish { said = pet.kind.jokes.random(); hops++; Audio.play(Sfx.Pop) }) {
+            Bob(3f, 500) { Px(pet.kind.sprite, 64.dp) }
+        }
+        Txt("⭐ ${pet.name}", 11, Color.White, modifier = Modifier.background(Pal.ink.copy(alpha = 0.7f), RoundedCornerShape(5.dp)).padding(horizontal = 4.dp))
+    }
+}
+
+// MARK: - Decorate (your house: two storeys, more with upgrades)
 
 private const val HOUSE_W = 800f
 private const val ROOF_H = 90f
@@ -259,47 +301,68 @@ private const val ROOM_H = 230f
 private const val ROOM_X = 16f
 private const val ROOM_W = HOUSE_W - 32f
 private const val PIXEL = 5f
-private const val HOUSE_H = ROOF_H + ROOM_H * 2 + 16
 
-private fun roomTop(floor: Int) = ROOF_H + (1 - floor) * ROOM_H   // floor 1 (upstairs) is on top
-private fun floorLine(floor: Int) = roomTop(floor) + ROOM_H - 14f
+private fun houseH(floors: Int) = ROOF_H + ROOM_H * floors + 16
+private fun roomTop(floor: Int, floors: Int) = ROOF_H + (floors - 1 - floor) * ROOM_H   // the top floor is drawn first
+private fun floorLine(floor: Int, floors: Int) = roomTop(floor, floors) + ROOM_H - 14f
 
 @Composable
 fun DecorateScreen(game: GameState) {
     var selected by remember { mutableStateOf<Long?>(null) }
     var targetFloor by remember { mutableIntStateOf(0) }
+    var zoom by remember { mutableStateOf<Int?>(null) }
+    val floors = game.s.floors
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        val k = 406f / HOUSE_W
-        Box(Modifier.size((HOUSE_W * k).dp, (HOUSE_H * k).dp), contentAlignment = Alignment.Center) {
-            Box(Modifier.requiredSize(HOUSE_W.dp, HOUSE_H.dp).graphicsLayer { scaleX = k; scaleY = k }) {
-                House(game, selected) { selected = it }
+        val inside = zoom
+        if (inside != null) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Btn("🏠 Whole house", Pal.brown, 14, Modifier.width(150.dp)) { zoom = null }
+                Txt("${rooms[inside].emoji} ${rooms[inside].title}", 20, Color.White, modifier = Modifier.weight(1f), maxLines = 1)
             }
+            Box(Modifier.fillMaxWidth().height(440.dp).clip(RoundedCornerShape(12.dp)).border(3.dp, Pal.ink, RoundedCornerShape(12.dp))) {
+                RoomScene(game, inside, hub = false)
+            }
+            targetFloor = inside
+        } else {
+            val hh = houseH(floors)
+            val k = minOf(406f / HOUSE_W, 400f / hh)
+            Box(Modifier.size((HOUSE_W * k).dp, (hh * k).dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.requiredSize(HOUSE_W.dp, hh.dp).graphicsLayer { scaleX = k; scaleY = k }) {
+                    House(game, selected, { selected = it }) { zoom = it }
+                }
+            }
+            Txt("Tap a room to look inside. Drag things to move them.", 14, Color.White, align = TextAlign.Center)
         }
-        Txt("Drag things to move them. Tap one to pick it.", 14, Color.White)
 
         Column(Modifier.fillMaxWidth().weight(1f).panel().verticalScroll(rememberScrollState()).padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (inside == null) game.nextRoom?.let { room ->
+                Row(Modifier.fillMaxWidth().panel(hex(0xDDE7FF)).padding(8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Txt("🏗️ Add a ${room.title} ${room.emoji} on top!", 15, modifier = Modifier.weight(1f))
+                    Btn("Build ${money(room.price)}", Pal.blue, 14, Modifier.width(150.dp)) { game.upgradeHouse() }
+                }
+            }
             val sel = game.s.placed.firstOrNull { it.id == selected }
-            if (sel != null) {
+            if (sel != null && inside == null) {
                 Row(Modifier.fillMaxWidth().panel(hex(0xFFF1B8)).padding(8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Txt(sel.item.title, 16, modifier = Modifier.weight(1f))
-                    Btn(if (sel.floor == 0) "⬆ Up" else "⬇ Down", Pal.blue, 14, Modifier.width(90.dp)) { game.switchFloor(sel.id) }
+                    Btn("🔁 ${rooms[(sel.floor + 1) % floors].emoji}", Pal.blue, 14, Modifier.width(80.dp)) { game.switchFloor(sel.id) }
                     Btn("📦 Away", Pal.brown, 14, Modifier.width(100.dp)) { game.putAway(sel.id); selected = null }
                 }
             }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Txt("Storage. Place on:", 16)
-                for ((f, label) in listOf(0 to "Downstairs", 1 to "Upstairs")) {
-                    Txt(label, 14, if (targetFloor == f) Color.White else Pal.ink,
+            if (inside == null) Row(Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Txt("Place in:", 15)
+                for (f in 0 until floors) {
+                    Txt("${rooms[f].emoji} ${rooms[f].title}", 13, if (targetFloor == f) Color.White else Pal.ink,
                         modifier = Modifier.squish { targetFloor = f }.panel(if (targetFloor == f) Pal.green else Color.White).padding(horizontal = 8.dp, vertical = 3.dp))
                 }
-            }
+            } else Txt("Put things in the ${rooms[inside].title}:", 15)
             val stored = Item.entries.filter { game.available(it) > 0 }
             if (stored.isEmpty()) Txt("Everything is out! Buy more in the Shop 🛍️", 14)
             for (i in stored) {
                 Row(Modifier.fillMaxWidth().panel(Color.White).padding(6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) { Px(i.sprite, 38.dp) }
                     Txt("${i.title} ×${game.available(i)}", 15, modifier = Modifier.weight(1f))
-                    Btn("Place", Pal.green, 14, Modifier.width(80.dp)) { selected = game.place(i, targetFloor) }
+                    Btn("Place", Pal.green, 14, Modifier.width(80.dp)) { selected = game.place(i, inside ?: targetFloor) }
                 }
             }
         }
@@ -307,8 +370,10 @@ fun DecorateScreen(game: GameState) {
 }
 
 @Composable
-private fun House(game: GameState, selected: Long?, onSelect: (Long?) -> Unit) {
-    Box(Modifier.size(HOUSE_W.dp, HOUSE_H.dp)) {
+private fun House(game: GameState, selected: Long?, onSelect: (Long?) -> Unit, onZoom: (Int) -> Unit) {
+    val floors = game.s.floors
+    val hh = houseH(floors)
+    Box(Modifier.size(HOUSE_W.dp, hh.dp)) {
         Canvas(Modifier.fillMaxSize()) {
             val u = density
             fun r(c: Color, x: Float, y: Float, w: Float, h: Float) = drawRect(c, Offset(x * u, y * u), Size(w * u, h * u))
@@ -316,15 +381,14 @@ private fun House(game: GameState, selected: Long?, onSelect: (Long?) -> Unit) {
             drawPath(Path().apply { moveTo(40 * u, (ROOF_H - 18) * u); lineTo(HOUSE_W / 2 * u, 6 * u); lineTo((HOUSE_W - 40) * u, (ROOF_H - 18) * u); lineTo((HOUSE_W - 40) * u, (ROOF_H - 8) * u); lineTo(HOUSE_W / 2 * u, 20 * u); lineTo(40 * u, (ROOF_H - 8) * u); close() }, hex(0xF4F8FF))
             r(hex(0x6B4A3A), HOUSE_W - 190, 10f, 40f, 60f)
             r(hex(0xF4F8FF), HOUSE_W - 196, 6f, 52f, 10f)
-            r(Pal.ink, 0f, ROOF_H, HOUSE_W, ROOM_H * 2 + 16)
-            for (f in 0..1) {
-                val top = roomTop(f)
-                val wall = if (f == 1) hex(0xF6D7E3) else hex(0xE3F0D8)
-                val stripe = if (f == 1) hex(0xEFC3D3) else hex(0xD3E6C4)
-                r(wall, ROOM_X, top + 8, ROOM_W, ROOM_H - 8)
+            r(Pal.ink, 0f, ROOF_H, HOUSE_W, ROOM_H * floors + 16)
+            for (f in 0 until floors) {
+                val top = roomTop(f, floors)
+                val room = rooms[f]
+                r(hex(room.wall), ROOM_X, top + 8, ROOM_W, ROOM_H - 8)
                 var x = ROOM_X
-                while (x < ROOM_X + ROOM_W) { r(stripe, x, top + 8, 10f, ROOM_H - 22); x += 40f }
-                val wx = if (f == 1) ROOM_X + ROOM_W * 0.42f else ROOM_X + ROOM_W * 0.58f
+                while (x < ROOM_X + ROOM_W) { r(hex(room.stripe), x, top + 8, 10f, ROOM_H - 22); x += 40f }
+                val wx = if (f % 2 == 1) ROOM_X + ROOM_W * 0.42f else ROOM_X + ROOM_W * 0.58f
                 r(Pal.ink, wx - 4, top + 40, 88f, 78f)
                 r(hex(0x1D2B53), wx, top + 44, 80f, 70f)
                 for (i in 0 until 8) r(Color.White, wx + (i * 23) % 76, top + 48 + (i * 31) % 62, 4f, 4f)
@@ -333,23 +397,33 @@ private fun House(game: GameState, selected: Long?, onSelect: (Long?) -> Unit) {
                 r(hex(0x9A5B34), ROOM_X, top + ROOM_H - 14, ROOM_W, 14f)
                 r(hex(0x7A4428), ROOM_X, top + ROOM_H - 14, ROOM_W, 3f)
             }
-            r(hex(0xF4F8FF), -20f, ROOF_H + ROOM_H * 2 + 8, HOUSE_W + 40, 12f)
+            r(hex(0xF4F8FF), -20f, ROOF_H + ROOM_H * floors + 8, HOUSE_W + 40, 12f)
         }
-        val placed = game.s.placed.sortedWith(compareBy({ it.item.spot != Spot.Rug }, { it.id == selected }))
-        for (p in placed) PlacedItem(game, p, p.id == selected, onSelect)
+        // Tap the empty part of a room to go inside. Room name + the pets in there.
+        for (f in 0 until floors) {
+            Box(Modifier.offset(ROOM_X.dp, (roomTop(f, floors) + 8).dp).size(ROOM_W.dp, (ROOM_H - 8).dp).squish { onZoom(f); Audio.play(Sfx.Tap) }) {
+                Row(Modifier.align(Alignment.TopStart).padding(8.dp).panel(Color.White.copy(alpha = 0.9f)).padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Txt("${rooms[f].emoji} ${rooms[f].title}  🔍", 26)
+                    for (pet in game.petsIn(f).take(3)) Px(pet.kind.sprite, 34.dp)
+                    if (f == 0) game.mainPet?.let { Px(it.kind.sprite, 34.dp) }
+                }
+            }
+        }
+        val placed = game.s.placed.filter { it.floor < floors }.sortedWith(compareBy({ it.item.spot != Spot.Rug }, { it.id == selected }))
+        for (p in placed) PlacedItem(game, p, floors, p.id == selected, onSelect)
     }
 }
 
 @Composable
-private fun PlacedItem(game: GameState, p: Placed, isSelected: Boolean, onSelect: (Long?) -> Unit) {
+private fun PlacedItem(game: GameState, p: Placed, floors: Int, isSelected: Boolean, onSelect: (Long?) -> Unit) {
     val img = Sprites.named(p.item.sprite)
     val w = img.width * PIXEL
     val h = img.height * PIXEL
     val cx = ROOM_X + p.x * ROOM_W
     val top = when (p.item.spot) {
-        Spot.Floor -> floorLine(p.floor) - h
-        Spot.Rug -> floorLine(p.floor) - h + 10
-        Spot.Wall -> roomTop(p.floor) + 16 + p.y * (ROOM_H - 60 - h).coerceAtLeast(10f)
+        Spot.Floor -> floorLine(p.floor, floors) - h
+        Spot.Rug -> floorLine(p.floor, floors) - h + 10
+        Spot.Wall -> roomTop(p.floor, floors) + 16 + p.y * (ROOM_H - 60 - h).coerceAtLeast(10f)
     }
     Box(
         Modifier.offset((cx - w / 2).dp, top.dp)

@@ -223,6 +223,8 @@ private fun PetCare(game: GameState) {
                 PetTool.Cuddle -> "Rub ${pet.name} for cuddles! Tap for a silly surprise."
             }, 15, align = TextAlign.Center,
         )
+        if (game.mainPet?.id == pet.id) Txt("⭐ ${pet.name} is your main pet and stays by your side!", 14, Pal.darkGreen, align = TextAlign.Center)
+        else Btn("⭐ Make ${pet.name} my main pet", hex(0xE0843A), 15, Modifier.fillMaxWidth()) { game.setMainPet(pet.id) }
         Txt("Keep every meter high and ${pet.name} finds you a little gift each day! 🎁", 13, Pal.brown, align = TextAlign.Center)
     }
 }
