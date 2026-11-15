@@ -80,4 +80,14 @@ class RulesTest {
         assertTrue("pet:Owl" in s.stickers && "wrap" in s.stickers && "item:Tree" in s.stickers)
         assertTrue(stickerPrizes.all { it.first <= stickers.size })
     }
+
+    @Test fun houseStartsWithTwoStoreysAndUpgradesCostMoney() {
+        assertEquals(2, Save().floors)
+        assertEquals(START_FLOORS, rooms.count { it.price == 0 })
+        assertTrue(rooms.drop(START_FLOORS).all { it.price > 0 })
+        // an old save (no floors / mainPet fields) still loads as a two-storey house
+        val old = json.decodeFromString<Save>("""{"name":"Lexi","placed":[{"id":1,"item":"Bed","floor":1,"x":0.5}]}""")
+        assertEquals(2, old.floors)
+        assertEquals(0L, old.mainPet)
+    }
 }

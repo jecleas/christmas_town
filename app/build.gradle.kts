@@ -13,8 +13,8 @@ android {
         applicationId = "com.lexi.christmastown"
         minSdk = 26
         targetSdk = 35
-        versionCode = 6
-        versionName = "0.6-expansion"
+        versionCode = 7
+        versionName = "0.7-house"
     }
     buildTypes {
         release {
