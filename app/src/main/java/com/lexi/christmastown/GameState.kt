@@ -131,6 +131,14 @@ class GameState(private val prefs: SharedPreferences) {
         return true
     }
 
+    /** Checks (without using) energy, so mini-games can start only if you can finish them. */
+    fun hasEnergy(amount: Int): Boolean {
+        if (s.energy >= amount) return true
+        say("Too tired! 😴 Eat a cookie or some food, or go to sleep.")
+        Audio.play(Sfx.Oops)
+        return false
+    }
+
     fun eat(food: Food) {
         if (s.food.n(food) <= 0) return
         if (s.energy >= 100) { say("You're already full of energy! ⚡"); return }

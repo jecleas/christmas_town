@@ -80,12 +80,12 @@ const val HARVEST = 3
 }
 
 @Serializable enum class Toy(val title: String, val unlockLevel: Int, val sprite: String, val steps: List<String>) {
-    Teddy("Teddy Bear", 1, "teddy", listOf("Stuff the fluff", "Sew it up", "Tie a bow")),
-    CandyCane("Candy Cane", 1, "candycane", listOf("Pull the sugar", "Add red stripes", "Bend the hook")),
-    Train("Toy Train", 2, "train", listOf("Build the engine", "Add the wheels", "Paint it red")),
-    Doll("Doll", 3, "doll", listOf("Make the face", "Brush the hair", "Sew the dress")),
-    Drum("Drum", 4, "drum", listOf("Stretch the top", "Paint the stripes", "Add the sticks")),
-    Robot("Robot", 5, "robot", listOf("Bolt the body", "Add the lights", "Switch it on")),
+    Teddy("Teddy Bear", 1, "teddy", listOf("Stuff it with cotton", "Sew it up", "Pick a fur color")),
+    CandyCane("Candy Cane", 1, "candycane", listOf("Pull the sugar", "Pick a stripe color", "Bend the hook")),
+    Train("Toy Train", 2, "train", listOf("Build the engine", "Screw on the wheels", "Paint it")),
+    Doll("Doll", 3, "doll", listOf("Sew the face", "Brush the hair", "Pick a dress")),
+    Drum("Drum", 4, "drum", listOf("Stretch the top", "Paint the drum", "Add the sticks")),
+    Robot("Robot", 5, "robot", listOf("Bolt the body", "Charge the battery", "Pick a paint")),
 }
 
 @Serializable enum class Food(val title: String, val price: Int, val energy: Int, val sprite: String) {
