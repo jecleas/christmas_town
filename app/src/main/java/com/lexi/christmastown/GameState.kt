@@ -88,6 +88,10 @@ sealed interface Overlay {
     // House & main pet (follow-up)
     val floors: Int = START_FLOORS,
     val mainPet: Long = 0,
+    // Party Place (Level 7)
+    val moviesSeen: Set<String> = emptySet(),
+    val balloonBest: Int = 0,
+    val juiceShared: Set<String> = emptySet(),
 )
 
 /** Stickers you've earned just by what's in your save (things you own, pets, friends...). */
@@ -224,7 +228,7 @@ class GameState(private val prefs: SharedPreferences) {
             copy(
                 day = day + 1, energy = 100, paidToday = false, fed = emptySet(), brushed = emptySet(),
                 talkedToday = emptySet(), jobs = jobsFor(levelFor(workdays)), kids = makeKids(listOf(5, 5, 5, 5, 5, 5, 6, 6)[levelFor(workdays) - 1]), kidIndex = 0,
-                washed = emptySet(),
+                washed = emptySet(), juiceShared = emptySet(),
             )
         }
         overlay = Overlay.Morning(s.day, worked)
@@ -638,6 +642,46 @@ class GameState(private val prefs: SharedPreferences) {
     fun throwParty(reward: Item) {
         update { copy(partyDone = true, owned = owned.add(reward, 1), hearts = hearts.add("Twinkle", 1).mapValues { it.value.coerceAtMost(5) }) }
         say("Best party ever! 🎉 You got a ${reward.title} for your house!")
+    }
+
+    // MARK: Party Place
+
+    val partyOpen get() = level >= PARTY_LEVEL
+
+    /** Four elf friends are at the party; who comes changes every day. */
+    val partyGuests get() = npcs.shuffled(kotlin.random.Random(s.day)).take(4)
+
+    fun drink(j: Juice) {
+        if (s.energy >= 100) { say("You're already full of energy! ⚡"); return }
+        if (pay(j.price)) {
+            update { copy(energy = (energy + j.energy).coerceAtMost(100)) }
+            say("Slurp! ${j.title} is yummy! +${j.energy} energy ⚡")
+        }
+    }
+
+    /** Buy a friend a juice: +1 💖, once per friend each day. */
+    fun shareJuice(npc: Npc, j: Juice) {
+        if (npc.name in s.juiceShared) { say("${npc.name} already has a juice today! 🧃"); return }
+        if (pay(j.price)) {
+            update { copy(juiceShared = juiceShared + npc.name, hearts = hearts.add(npc.name, 1).mapValues { it.value.coerceAtMost(5) }) }
+            say("${npc.name} loves the ${j.title}! Cheers! 💖")
+            checkBestFriend(npc)
+        }
+    }
+
+    /** Pay for a movie ticket. Returns true if you can go in. */
+    fun buyTicket(m: Movie): Boolean {
+        if (!pay(m.price)) return false
+        update { copy(moviesSeen = moviesSeen + m.title) }
+        sticker("movie")
+        say("Enjoy the movie! 🍿")
+        return true
+    }
+
+    fun balloonsDone(popped: Int) {
+        if (popped >= 25) sticker("balloons")
+        if (popped > s.balloonBest) { update { copy(balloonBest = popped) }; say("New best: $popped balloons! 🎈🏆") }
+        else say("You popped $popped balloons! 🎈")
     }
 
     fun go(p: Place?) { place = p }

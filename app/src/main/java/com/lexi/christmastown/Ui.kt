@@ -152,9 +152,10 @@ fun backgroundFor(p: Place?): Brush = when (p) {
     Place.Pets -> Brush.verticalGradient(listOf(hex(0xFFE3B0), hex(0xF7C27A)))
     Place.Advent -> Brush.verticalGradient(listOf(hex(0x1D2B53), hex(0x7A1E2E)))
     Place.Stickers -> Brush.verticalGradient(listOf(hex(0x5B3A8C), hex(0x9B6BE0)))
+    Place.Party -> Brush.verticalGradient(listOf(hex(0x3A1F5C), hex(0xC2407E)))
 }
 
-private val darkPlaces = setOf(null, Place.Decorate, Place.Snacks, Place.Phone, Place.Stable, Place.SantaList, Place.Sleigh, Place.Friends, Place.Closet, Place.Park, Place.Advent, Place.Stickers)
+private val darkPlaces = setOf(null, Place.Decorate, Place.Snacks, Place.Phone, Place.Stable, Place.SantaList, Place.Sleigh, Place.Friends, Place.Closet, Place.Park, Place.Advent, Place.Stickers, Place.Party)
 fun textOn(p: Place?) = if (p in darkPlaces) Color.White else Pal.ink
 
 // MARK: - The whole app
@@ -185,6 +186,7 @@ fun GameApp(game: GameState) {
                 Place.Pets -> Music.JollyOldStNicholas
                 Place.Advent -> Music.SilentNight
                 Place.Stickers -> Music.JingleBells
+                Place.Party -> Music.WeWish
             }
         }
         LaunchedEffect(song) { Audio.music(song) }
@@ -233,6 +235,7 @@ private fun PlaceScreen(game: GameState, p: Place) = when (p) {
     Place.Pets -> PetsScreen(game)
     Place.Advent -> AdventScreen(game)
     Place.Stickers -> StickerScreen(game)
+    Place.Party -> PartyScreen(game)
 }
 
 /** A full-screen activity: big Back button, title, money and energy, then the content. */
@@ -347,7 +350,7 @@ fun unlocksFor(level: Int) = when (level) {
     4 -> "New: Drums 🥁, more reindeer and trickier sleigh rides!"
     5 -> "New: Robots 🤖, another reindeer and windier sleigh rides! ☁️"
     6 -> "New: Rocking horses 🐴, gingerbread people, ginger seeds, a reindeer, and Santa wants presents WRAPPED 🎁"
-    7 -> "New: Yo-yos, candy cane cookies, peppermint seeds, a reindeer, and the Town Tree needs decorating 🎄"
+    7 -> "New: Yo-yos, candy cane cookies, peppermint seeds, a reindeer, the Town Tree needs decorating 🎄, and the PARTY PLACE opens! 🎉🧃🎬"
     8 -> "New: Snow globes, reindeer cookies, foggy sleigh nights... and RUDOLPH joins the stable! His nose glows! 🔴"
     else -> ""
 }

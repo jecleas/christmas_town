@@ -405,6 +405,9 @@ val stickers: List<Sticker> = buildList {
     add(Sticker("level8", "Became Santa's Best Elf", "santa"))
     add(Sticker("christmas", "Saved Christmas!", "presents"))
     add(Sticker("advent", "Opened an advent door", "candycane"))
+    add(Sticker("movie", "Watched a movie at the Party Place", "popcorn"))
+    add(Sticker("balloons", "Popped 25 balloons in one game", "balloon"))
+    add(Sticker("memory", "Matched all the party cards", "juice_punch"))
 }
 
 /** Sticker milestones and their prizes. */
@@ -432,6 +435,95 @@ enum class Place(val title: String, val sprite: String, val side: Side, val colo
     Phone("Phone", "phone", Side.Right, hex(0x3D6FD6)),
     Snacks("Snacks", "cocoa_mug", Side.Right, hex(0xC98B5E)),
     Pets("Pets", "pet_penguin", Side.Right, hex(0xF2A93B)),
+    Party("Party Place", "balloon", Side.Right, hex(0xFF5FA2)),
     Advent("Advent Calendar", "gift", Side.Hidden, hex(0xA02338)),
     Stickers("Sticker Book", "teddy", Side.Hidden, hex(0x9B6BE0)),
 }
+
+// MARK: - Party Place (opens at Level 7)
+
+const val PARTY_LEVEL = 7
+
+/** Fruit juice at the Party Place juice bar: costs a little elf money, gives energy. */
+enum class Juice(val title: String, val price: Int, val energy: Int, val sprite: String) {
+    Orange("Orange Juice", 10, 10, "juice_orange"),
+    Apple("Apple Juice", 10, 10, "juice_apple"),
+    Strawberry("Strawberry Juice", 15, 15, "juice_strawberry"),
+    Grape("Grape Juice", 15, 15, "juice_grape"),
+    Kiwi("Kiwi Juice", 20, 20, "juice_kiwi"),
+    Punch("Fruit Punch", 25, 25, "juice_punch"),
+}
+
+/** What the elves say at the party. */
+val partyLines = listOf(
+    "This is the BEST party ever! 🎉",
+    "Have you tried the fruit punch? It's so fizzy!",
+    "I popped SO many balloons! 🎈",
+    "Let's watch a movie together! I'll bring popcorn 🍿",
+    "I love dancing! Look at my moves! 💃",
+    "The kiwi juice is green AND yummy!",
+    "Santa said we've been working super hard. Party time!",
+    "Do you want to play the memory game with me?",
+    "My favourite movie is the one with the snowman! ⛄",
+    "Cheers! 🧃 *clink*",
+)
+
+/** One picture in a party movie: who's on screen, where they go, and what the narrator says. */
+class Actor(val sprite: String, val x: Float, val h: Int, val up: Float = 0f, val dx: Float = 0f, val dy: Float = 0f, val flip: Boolean = false)
+class Scene(val caption: String, val sky: Long, val ground: Long, val actors: List<Actor>, val snow: Boolean = true)
+
+/** "@me" in an actor means your own elf; "@Twinkle" (etc.) means that elf friend. */
+class Movie(val title: String, val price: Int, val poster: String, val scenes: List<Scene>)
+
+private const val DAY_SKY = 0x9BC8EEL
+private const val NIGHT_SKY = 0x1D2B53L
+private const val SNOW = 0xF4F8FFL
+private const val WOOD = 0xC98B5EL
+
+val movies = listOf(
+    Movie(
+        "The Snowman Who Lost His Hat", 3, "snowman", listOf(
+            Scene("Once upon a time, a happy snowman lived in Christmas Town.", DAY_SKY, SNOW, listOf(Actor("snowman", 0.5f, 120), Actor("tree", 0.15f, 110), Actor("tree", 0.85f, 90))),
+            Scene("WHOOOSH! A big wind blew his hat away!", DAY_SKY, SNOW, listOf(Actor("snowman", 0.5f, 120), Actor("@Frost", 0.2f, 90, dx = 0.1f))),
+            Scene("\"Don't worry!\" said the elves. \"We'll find it!\"", DAY_SKY, SNOW, listOf(Actor("@me", 0.3f, 100, dx = 0.15f), Actor("@Twinkle", 0.6f, 100, dx = 0.15f))),
+            Scene("They looked behind the presents...", DAY_SKY, SNOW, listOf(Actor("presents", 0.6f, 70), Actor("@me", 0.25f, 100, dx = 0.1f))),
+            Scene("...and under the Christmas tree...", DAY_SKY, SNOW, listOf(Actor("tree", 0.55f, 140), Actor("@Twinkle", 0.2f, 100, dx = 0.1f))),
+            Scene("A puppy came running. It had the hat! Woof woof!", DAY_SKY, SNOW, listOf(Actor("pet_puppy", 0.9f, 60, dx = -0.5f), Actor("snowman", 0.25f, 120))),
+            Scene("The snowman got his hat back and smiled all day. THE END ⛄", DAY_SKY, SNOW, listOf(Actor("snowman", 0.4f, 120, up = 0f), Actor("pet_puppy", 0.65f, 50), Actor("@me", 0.82f, 90))),
+        ),
+    ),
+    Movie(
+        "The Littlest Reindeer", 4, "reindeer", listOf(
+            Scene("In Santa's stable lived the littlest reindeer of all.", NIGHT_SKY, WOOD, listOf(Actor("reindeer", 0.3f, 110), Actor("reindeer", 0.75f, 60, flip = true)), snow = false),
+            Scene("The big reindeer could fly. The little one could only hop. Boing!", DAY_SKY, SNOW, listOf(Actor("reindeer", 0.5f, 60, dy = 30f))),
+            Scene("So the elves helped! They baked special reindeer cookies.", DAY_SKY, WOOD, listOf(Actor("@me", 0.3f, 100), Actor("cookie_reindeer", 0.65f, 50)), snow = false),
+            Scene("Crunch crunch! The little reindeer practised every day.", DAY_SKY, SNOW, listOf(Actor("reindeer", 0.2f, 60, up = 10f, dx = 0.5f, dy = 30f), Actor("@Pepper", 0.85f, 90))),
+            Scene("Then... WHOOSH! Up, up into the sky!", DAY_SKY, SNOW, listOf(Actor("reindeer", 0.3f, 60, up = 20f, dx = 0.4f, dy = 90f))),
+            Scene("On Christmas Eve, the littlest reindeer pulled Santa's sleigh!", NIGHT_SKY, SNOW, listOf(Actor("sleigh", 0.1f, 50, up = 90f, dx = 0.55f, dy = 20f), Actor("reindeer", 0.3f, 50, up = 95f, dx = 0.55f, dy = 20f))),
+            Scene("Even the littlest can do BIG things. THE END 🦌", NIGHT_SKY, SNOW, listOf(Actor("reindeer", 0.5f, 90), Actor("santa", 0.2f, 110))),
+        ),
+    ),
+    Movie(
+        "The Great Cookie Mix-Up", 5, "cookie_ginger", listOf(
+            Scene("It was baking day at the Christmas Town bakery.", 0xFFE3C2L, WOOD, listOf(Actor("@Pepper", 0.3f, 100), Actor("cookie_sugar", 0.65f, 40), Actor("cookie_choco", 0.8f, 40)), snow = false),
+            Scene("Oops! Pepper put in salt instead of sugar! 🧂", 0xFFE3C2L, WOOD, listOf(Actor("@Pepper", 0.4f, 100, dx = 0.05f)), snow = false),
+            Scene("Then the gingerbread man jumped up and ran away!", 0xFFE3C2L, WOOD, listOf(Actor("ginger", 0.3f, 60, dx = 0.6f, dy = 20f)), snow = false),
+            Scene("\"Come back!\" Everyone chased him through the snow.", DAY_SKY, SNOW, listOf(Actor("ginger", 0.45f, 50, dx = 0.5f), Actor("@me", 0.05f, 90, dx = 0.45f), Actor("@Jingle", -0.15f, 90, dx = 0.45f))),
+            Scene("He hid inside a gingerbread house. Sneaky!", DAY_SKY, SNOW, listOf(Actor("ginghouse", 0.55f, 100), Actor("@me", 0.2f, 90))),
+            Scene("\"I just wanted to see the Christmas lights!\" he said.", NIGHT_SKY, SNOW, listOf(Actor("ginger", 0.4f, 60), Actor("tree", 0.7f, 140))),
+            Scene("So everyone saw the lights together, with new sugar cookies. THE END 🍪", NIGHT_SKY, SNOW, listOf(Actor("tree", 0.5f, 140), Actor("ginger", 0.25f, 50), Actor("@Pepper", 0.78f, 90), Actor("cookie_sugar", 0.1f, 30))),
+        ),
+    ),
+    Movie(
+        "Santa's Missing Sleigh Bells", 6, "santa", listOf(
+            Scene("The night before Christmas Eve, Santa looked worried.", NIGHT_SKY, WOOD, listOf(Actor("santa", 0.4f, 130), Actor("fireplace", 0.8f, 90)), snow = false),
+            Scene("\"My sleigh bells are GONE! The reindeer can't fly without them!\"", NIGHT_SKY, WOOD, listOf(Actor("santa", 0.3f, 130), Actor("reindeer", 0.75f, 90, flip = true)), snow = false),
+            Scene("The elves searched the workshop...", 0xFFD9D2L, WOOD, listOf(Actor("@me", 0.25f, 100, dx = 0.2f), Actor("teddy", 0.75f, 50), Actor("train", 0.9f, 35)), snow = false),
+            Scene("...the stable, and the snowy park...", DAY_SKY, SNOW, listOf(Actor("@Holly", 0.2f, 100, dx = 0.2f), Actor("snowman", 0.75f, 110))),
+            Scene("Jingle jingle! Something rang inside a snow globe!", DAY_SKY, WOOD, listOf(Actor("snowglobe", 0.5f, 90), Actor("@me", 0.2f, 100)), snow = false),
+            Scene("A cheeky penguin had borrowed them to make music! 🐧", DAY_SKY, SNOW, listOf(Actor("pet_penguin", 0.5f, 60, dy = 15f), Actor("rd_bells", 0.7f, 40))),
+            Scene("Bells back on! Off flew Santa, ho ho ho! THE END 🔔", NIGHT_SKY, SNOW, listOf(Actor("sleigh", 0.0f, 55, up = 100f, dx = 0.6f, dy = 20f), Actor("reindeer", 0.22f, 55, up = 105f, dx = 0.6f, dy = 20f))),
+        ),
+    ),
+)
+

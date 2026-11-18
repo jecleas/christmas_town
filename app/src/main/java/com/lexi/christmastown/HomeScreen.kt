@@ -150,6 +150,7 @@ private fun badge(game: GameState, p: Place): String? {
         Place.Pets -> if (s.pets.any { it.fullness(game.now) < 0.4f || it.cleanness(game.now) < 0.4f }) "!" else null
         Place.Decorate -> if (Item.entries.any { game.available(it) > 0 }) "New" else null
         Place.Friends -> if (npcs.any { it.name !in s.talkedToday }) "!" else null
+        Place.Party -> if (!game.partyOpen) "🔒" else if (game.partyGuests.any { it.name !in s.talkedToday }) "!" else null
         Place.Phone -> (listOf(GROUP) + game.met).sumOf { game.unread(it) }.takeIf { it > 0 }?.toString() ?: if (game.groupHasNews) "!" else null
         else -> null
     }
