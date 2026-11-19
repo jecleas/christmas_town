@@ -342,16 +342,19 @@ private const val FILL_TAPS = 10
 private val toyPaints = listOf(hex(0x9A5B34), hex(0xE5394B), hex(0x3D6FD6), hex(0x3FAF5A), hex(0x9B6BE0), hex(0xFF8FB0), hex(0xFFCC4D))
 private val dotSpots = listOf(0.2f to 0.3f, 0.5f to 0.12f, 0.8f to 0.3f, 0.76f to 0.78f, 0.24f to 0.78f)
 
-private enum class ShopMode(val title: String) { Make("🔨 Make toys"), Wrap("🎁 Wrap presents") }
-
+/** The Workshop: make toys like always. Wrapping a present opens from the button underneath. */
 @Composable
 fun WorkshopScreen(game: GameState) {
-    var mode by remember { mutableStateOf(if (game.s.jobs.any { it.kind == JobKind.Wrap && !it.finished } && game.s.toys.values.sum() > 0 && game.s.jobs.first { it.kind == JobKind.Toys }.finished) ShopMode.Wrap else ShopMode.Make) }
+    var wrapping by remember { mutableStateOf(false) }
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Tabs(ShopMode.entries, mode, { it.title }) { mode = it }
-        when (mode) {
-            ShopMode.Make -> ToyMaker(game)
-            ShopMode.Wrap -> WrapGame(game)
+        if (wrapping) {
+            Btn("🔨 Back to making toys", Pal.red, 16, Modifier.width(260.dp)) { wrapping = false }
+            WrapGame(game)
+        } else {
+            ToyMaker(game)
+            Btn(Pal.purple, Modifier.width(300.dp), onClick = { wrapping = true }) {
+                Px("gift", 26.dp); Txt("Wrap a present", 17, Color.White)
+            }
         }
     }
 }

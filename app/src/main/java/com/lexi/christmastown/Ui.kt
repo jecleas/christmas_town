@@ -153,6 +153,7 @@ fun backgroundFor(p: Place?): Brush = when (p) {
     Place.Advent -> Brush.verticalGradient(listOf(hex(0x1D2B53), hex(0x7A1E2E)))
     Place.Stickers -> Brush.verticalGradient(listOf(hex(0x5B3A8C), hex(0x9B6BE0)))
     Place.Party -> Brush.verticalGradient(listOf(hex(0x3A1F5C), hex(0xC2407E)))
+    Place.Bank -> Brush.verticalGradient(listOf(hex(0xFFF1C9), hex(0xE9C77B)))
 }
 
 private val darkPlaces = setOf(null, Place.Decorate, Place.Snacks, Place.Phone, Place.Stable, Place.SantaList, Place.Sleigh, Place.Friends, Place.Closet, Place.Park, Place.Advent, Place.Stickers, Place.Party)
@@ -187,6 +188,7 @@ fun GameApp(game: GameState) {
                 Place.Advent -> Music.SilentNight
                 Place.Stickers -> Music.JingleBells
                 Place.Party -> Music.WeWish
+                Place.Bank -> Music.JollyOldStNicholas
             }
         }
         LaunchedEffect(song) { Audio.music(song) }
@@ -236,6 +238,7 @@ private fun PlaceScreen(game: GameState, p: Place) = when (p) {
     Place.Advent -> AdventScreen(game)
     Place.Stickers -> StickerScreen(game)
     Place.Party -> PartyScreen(game)
+    Place.Bank -> BankScreen(game)
 }
 
 /** A full-screen activity: big Back button, title, money and energy, then the content. */
@@ -295,8 +298,8 @@ private fun JobsCard(game: GameState) {
             }
         }
         Txt(
-            if (game.s.paidToday) "All done! Santa paid you ${money(PAY)}. Tap 💤 Sleep to start a new day."
-            else "Finish ALL the jobs and Santa pays you ${money(PAY)}!",
+            if (game.s.paidToday) "All done! You earned ${money(game.s.earnedToday)} today. Tap 💤 Sleep to start a new day."
+            else "Every 2 jobs = ${money(PAY_PER_TWO_JOBS)}! 💰  Sleigh deliveries = ${money(SLEIGH_BONUS)} extra! 🛷\nEarned today: ${money(game.s.earnedToday)}",
             15, align = TextAlign.Center,
         )
         Btn("OK!", Pal.green, modifier = Modifier.width(140.dp)) { game.showJobs = false }
@@ -311,7 +314,9 @@ private fun OverlayCard(game: GameState) {
             is Overlay.Paid -> {
                 Px("santa", 110.dp)
                 Txt("Ho ho ho! Great work!", 26, Pal.red, align = TextAlign.Center)
-                Txt("Santa paid you ${money(PAY)}! 💰", 20, align = TextAlign.Center)
+                Txt("You finished ALL of Santa's jobs!", 18, align = TextAlign.Center)
+                if (o.earned > 0) Txt("Santa paid you ${money(o.earned)}! 💰", 20, align = TextAlign.Center)
+                Txt("Today you earned ${money(game.s.earnedToday)} in total.", 16, Pal.darkGreen, align = TextAlign.Center)
                 if (o.newLevel != null) {
                     Txt("⭐ LEVEL UP! You're now a ${levelTitles[o.newLevel - 1]}! ⭐", 19, Pal.green, align = TextAlign.Center)
                     Txt(unlocksFor(o.newLevel), 15, align = TextAlign.Center)
@@ -322,7 +327,8 @@ private fun OverlayCard(game: GameState) {
                 Txt("☀️ Good morning!", 28)
                 Txt("It's Day ${o.day} in Christmas Town.", 18, align = TextAlign.Center)
                 if (o.worked) Txt("You worked hard yesterday. Santa is proud! 🎅", 16, align = TextAlign.Center)
-                else Txt("You didn't finish your jobs yesterday, so no pay. 💸\nWork today to earn ${money(PAY)}!", 16, Pal.red, align = TextAlign.Center)
+                else Txt("You didn't finish ALL your jobs yesterday, so it didn't count toward your next level.\nEvery 2 jobs pays ${money(PAY_PER_TWO_JOBS)}!", 16, Pal.red, align = TextAlign.Center)
+                if (o.interest > 0) Txt("🏦 The bank added ${money(o.interest)} to your savings overnight!", 16, Pal.darkGreen, align = TextAlign.Center)
                 ElfPx(game.s.look, 100.dp)
                 Btn("Let's go! ❄️", Pal.green, modifier = Modifier.width(180.dp)) { game.overlay = Overlay.None }
             }

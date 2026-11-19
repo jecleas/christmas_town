@@ -189,7 +189,9 @@ const val TEAM_SIZE = 4
 
 val levelTitles = listOf("Helper Elf", "Cookie Elf", "Toy Elf", "Sleigh Elf", "Workshop Star", "Gift Wrapper", "Tree Trimmer", "Santa's Best Elf")
 const val MAX_LEVEL = 8
-const val PAY = 1000
+/** Lexi's pay rule: every 2 jobs you finish pays \$2,000, and finishing the sleigh deliveries pays \$1,000 extra. */
+const val PAY_PER_TWO_JOBS = 2000
+const val SLEIGH_BONUS = 1000
 const val CHRISTMAS_EVE_WORKDAYS = 10
 
 /** Workdays needed to reach each level. */
@@ -277,7 +279,7 @@ val npcs = listOf(
     Npc(
         "Jingle", ElfLook(false, 1, HairStyle.Short, 3, 2, Outfit.Overalls, 0, Hat.Beanie, 1), "Toy Maker",
         listOf(
-            "Santa pays \$1,000 every day you finish ALL your jobs!",
+            "Santa pays \$2,000 for every 2 jobs you finish! And \$1,000 extra for the sleigh!",
             "Making toys and baking use energy. Eat something if you're tired!",
             "Tap the 📋 jobs button at the top to see what Santa needs today.",
             "New toys unlock when you level up. I can't wait to make robots!",
@@ -428,6 +430,7 @@ enum class Place(val title: String, val sprite: String, val side: Side, val colo
     SantaList("Santa's List", "santa", Side.Left, hex(0xA02338)),
     Sleigh("Sleigh", "sleigh", Side.Left, hex(0x3D6FD6)),
     Park("Snow Park", "snowman", Side.Left, hex(0x5BA4D9)),
+    Bank("Bank", "moneybag", Side.Left, hex(0xD9A21B)),
     Decorate("Decorate", "tree", Side.Right, hex(0x2E7D4A)),
     Shop("Shop", "presents", Side.Right, hex(0x9B6BE0)),
     Closet("Closet", "", Side.Right, hex(0xFF8FB0)),
@@ -527,3 +530,27 @@ val movies = listOf(
     ),
 )
 
+
+// MARK: - Bank
+
+/** Mr. Silverbell, the old elf who runs the Christmas Town Bank. */
+val bankerLook = ElfLook(girl = false, skin = 1, hairStyle = HairStyle.Short, hairColor = 6, eye = 0, outfit = Outfit.Sweater, outfitColor = 2, hat = Hat.TopHat, hatColor = 2)
+const val BANKER = "Mr. Silverbell"
+
+/** Every night the bank adds a little extra to your savings: $5 for every $100 (up to $500 a night). */
+fun bankInterest(saved: Int) = (saved / 100 * 5).coerceAtMost(500)
+
+val bankerHellos = listOf(
+    "Good day to you, young elf! Welcome to the Christmas Town Bank. How may I help you today?",
+    "Ah, hello again! Lovely to see you. What can I do for you today?",
+    "Welcome, welcome! Mind the snow on your boots. How can I help?",
+    "Hello there! My, what a hard-working elf you are. What would you like to do today?",
+)
+val bankerChats = listOf(
+    "I've worked at this bank for 300 years! Elves live a very long time, you know. 🎩",
+    "Money in the bank is safe, even from the cheekiest penguin! 🐧",
+    "Every night I add a little extra to your savings. \$5 for every \$100! That's called interest.",
+    "When I was a young elf, a candy cane cost just one penny! 🍬",
+    "Saving up is clever! Then you can buy something really BIG later. 🏠",
+    "Santa keeps his money here too. But shhh, that's a secret! 🤫",
+)

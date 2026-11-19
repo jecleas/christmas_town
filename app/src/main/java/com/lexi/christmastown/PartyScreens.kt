@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -430,30 +431,20 @@ private fun MoviePlayer(game: GameState, movie: Movie, onLeave: () -> Unit) {
 
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Txt("🎬 ${movie.title}", 19, Color.White, align = TextAlign.Center)
-        // the cinema: red curtains around the big screen
-        Box(Modifier.width(406.dp).background(hex(0x8E1B2C), RoundedCornerShape(12.dp)).border(3.dp, Pal.ink, RoundedCornerShape(12.dp)).padding(8.dp), contentAlignment = Alignment.Center) {
-            Box(Modifier.size(SCREEN_W.dp, SCREEN_H.dp).clip(RoundedCornerShape(6.dp)).background(Color.Black)) {
-                if (ended) {
-                    Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Txt("✨ THE END ✨", 34, Pal.gold)
-                        Txt("Thanks for watching!", 16, Color.White)
-                    }
-                } else {
-                    SceneView(game, movie.scenes[scene], st)
+        // the cinema, seen from your seat in the back row
+        Cinema3D(game, movie) {
+            if (ended) {
+                Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Txt("✨ THE END ✨", 34, Pal.gold)
+                    Txt("Thanks for watching!", 16, Color.White)
                 }
+            } else {
+                SceneView(game, movie.scenes[scene], st)
             }
         }
         val caption = if (ended) "Everybody claps! 👏👏👏" else movie.scenes[scene].caption
         val shown = if (ended) caption else caption.take((st * 28).toInt() + 1)
-        Txt(shown, 18, align = TextAlign.Center, modifier = Modifier.fillMaxWidth().height(80.dp).panel().padding(10.dp))
-        // you and your friends in the seats, munching popcorn
-        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-            val guests = game.partyGuests.take(3)
-            Px("popcorn", 34.dp)
-            ElfPx(game.s.look, 80.dp)
-            for (g in guests) ElfPx(g.look, 76.dp)
-            Px("juice_punch", 34.dp)
-        }
+        Txt(shown, 17, align = TextAlign.Center, modifier = Modifier.fillMaxWidth().height(72.dp).panel().padding(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (!ended) Btn("⏭ Next", Pal.blue, 16, Modifier.width(130.dp)) { scene++ }
             Btn(if (ended) "Back to the party 🎉" else "🚪 Leave", if (ended) partyPink else Pal.red, 16, Modifier.width(if (ended) 240.dp else 130.dp)) { onLeave() }
@@ -488,6 +479,142 @@ private fun SceneView(game: GameState, scene: Scene, st: Float) {
             val bottom = SCREEN_H * 0.74f + 6f - a.up - a.dy * p + bob
             Px(img, a.h.dp, Modifier.offset((cx - w / 2).dp, (bottom - a.h).dp).graphicsLayer { if (a.flip) scaleX = -1f })
         }
+    }
+}
+
+
+// MARK: The cinema room: rows of seats, you in the back row, elves popping out for snacks
+
+private const val ROOM_W = 406f
+private const val ROOM_H = 470f
+private const val AISLE_X = 374f          // the aisle runs down the right-hand side
+private const val EXIT_Y = 560f           // the door is behind you, below the bottom edge
+private const val ELF_H = 78f
+private const val TRIP_SECONDS = 10f
+private const val SIT = 0.64f            // how much of a seated elf shows above the seat back
+private const val STAND = 0.95f
+private val rowY = listOf(258f, 318f, 396f)        // top of each row's seat backs, far → near
+private val rowScale = listOf(0.55f, 0.75f, 1.05f)
+private val rowSeats = listOf(7, 6, 5)
+private val screenScale = 292f / SCREEN_W
+
+private class Viewer(val front: ImageBitmap, val back: ImageBitmap, val row: Int, val seat: Int, val you: Boolean = false)
+private class Trip(val who: Int, val start: Float)
+
+private fun seatSpan(row: Int) = (20f + (2 - row) * 14f) to (AISLE_X - 26f)
+private fun seatX(row: Int, seat: Int): Float { val (l, r) = seatSpan(row); return l + (r - l) / rowSeats[row] * (seat + 0.5f) }
+private fun seatW(row: Int): Float { val (l, r) = seatSpan(row); return (r - l) / rowSeats[row] * 0.88f }
+/** Things look bigger the closer they are to you. */
+private fun scaleAt(y: Float) = (0.55f + (y - 270f) / (408f - 270f) * 0.5f).coerceAtLeast(0.5f)
+private fun lerp(a: Float, b: Float, k: Float) = a + (b - a) * k.coerceIn(0f, 1f)
+
+private fun randomLook(r: Random) = ElfLook(
+    girl = r.nextBoolean(), skin = r.nextInt(ElfColors.skins.size), hairStyle = HairStyle.entries.random(r), hairColor = r.nextInt(ElfColors.hairs.size),
+    eye = r.nextInt(ElfColors.eyes.size), outfit = Outfit.entries.random(r), outfitColor = r.nextInt(ElfColors.clothes.size),
+    hat = Hat.entries.random(r), hatColor = r.nextInt(ElfColors.clothes.size),
+)
+
+@Composable
+private fun Cinema3D(game: GameState, movie: Movie, screen: @Composable androidx.compose.foundation.layout.BoxScope.() -> Unit) {
+    val audience = remember(movie) {
+        val r = Random(movie.title.hashCode() + game.s.day)
+        val guests = game.partyGuests
+        fun v(look: ElfLook, row: Int, seat: Int, you: Boolean = false) = Viewer(Sprites.elf(look), Sprites.elfBack(look), row, seat, you)
+        buildList {
+            add(v(game.s.look, 2, 2, you = true))
+            add(v(guests[0].look, 2, 1)); add(v(guests[1].look, 2, 3)); add(v(randomLook(r), 2, 0))
+            add(v(guests[2].look, 1, 3)); for (seat in listOf(0, 1, 4)) add(v(randomLook(r), 1, seat))
+            add(v(guests[3].look, 0, 2)); for (seat in listOf(0, 1, 4, 5, 6)) add(v(randomLook(r), 0, seat))
+        }
+    }
+    var ct by remember { mutableFloatStateOf(0f) }
+    var nextTrip by remember { mutableFloatStateOf(2f) }
+    val trips = remember { mutableStateListOf<Trip>() }
+    val snacking = remember { mutableStateListOf<Int>() }   // came back with popcorn
+    val popcorn = remember { Sprites.named("popcorn") }
+
+    LaunchedEffect(Unit) {
+        val start = withFrameMillis { it }
+        while (true) withFrameMillis { now ->
+            ct = (now - start) / 1000f
+            trips.removeAll { t -> (ct - t.start > TRIP_SECONDS).also { if (it && t.who !in snacking) snacking.add(t.who) } }
+            if (ct > nextTrip && trips.size < 2) {
+                val free = audience.indices.filter { i -> !audience[i].you && trips.none { it.who == i } }
+                if (free.isNotEmpty()) trips.add(Trip(free.random(), ct))
+                nextTrip = ct + 3f + Random.nextFloat() * 4f
+            }
+        }
+    }
+
+    Box(Modifier.size(ROOM_W.dp, ROOM_H.dp).clip(RoundedCornerShape(12.dp)).border(3.dp, Pal.ink, RoundedCornerShape(12.dp))) {
+        // walls, floor and curtains
+        Canvas(Modifier.fillMaxSize()) {
+            val u = density
+            drawRect(Brush.verticalGradient(listOf(hex(0x1A1024), hex(0x2E1838))))
+            drawRect(hex(0x3A2030), Offset(0f, 236 * u), Size(size.width, size.height))
+            for (side in listOf(0f, 1f)) for (i in 0 until 4) {
+                val x = if (side == 0f) (6 + i * 11) * u else (ROOM_W - 50 + i * 11) * u
+                drawRect(if (i % 2 == 0) hex(0x8E1B2C) else hex(0xB3263A), Offset(x, 6 * u), Size(11 * u, 228 * u))
+            }
+            drawRect(hex(0x8E1B2C), Offset(0f, 0f), Size(size.width, 10 * u))
+        }
+        // the big screen
+        Box(Modifier.offset(((ROOM_W - 292f) / 2).dp, 12.dp).size(292.dp, (SCREEN_H * screenScale).dp).clip(RoundedCornerShape(4.dp)).background(Color.Black)) {
+            Box(Modifier.align(Alignment.Center).requiredSize(SCREEN_W.dp, SCREEN_H.dp).graphicsLayer { scaleX = screenScale; scaleY = screenScale }, content = screen)
+        }
+        // seats and everyone watching (drawn far to near so closer things cover farther ones)
+        Canvas(Modifier.fillMaxSize()) {
+            val u = density
+            val items = ArrayList<Pair<Float, () -> Unit>>()
+            for (row in 0..2) items.add(rowY[row] to {
+                val sc = rowScale[row]
+                for (seat in 0 until rowSeats[row]) {
+                    val w = seatW(row); val h = 62f * sc; val x = seatX(row, seat) - w / 2
+                    drawRoundRect(Pal.ink, Offset(x * u, rowY[row] * u), Size(w * u, h * u), androidx.compose.ui.geometry.CornerRadius(8 * sc * u))
+                    drawRoundRect(hex(0xB0283C), Offset((x + 2) * u, (rowY[row] + 2) * u), Size((w - 4) * u, (h - 4) * u), androidx.compose.ui.geometry.CornerRadius(7 * sc * u))
+                    drawRect(hex(0xD2455A), Offset((x + 5) * u, (rowY[row] + 5) * u), Size((w - 10) * u, 4 * sc * u))
+                }
+            })
+            for ((i, v) in audience.withIndex()) {
+                val sc0 = rowScale[v.row]; val h0 = ELF_H * sc0
+                val sx = seatX(v.row, v.seat); val ry = rowY[v.row]
+                val trip = trips.firstOrNull { it.who == i }
+                val tau = trip?.let { ct - it.start } ?: -1f
+                var x = sx; var top = ry - h0 * SIT; var h = h0; var img = v.back; var depth = ry - 0.5f; var carrying = false
+                var visible = true
+                when {
+                    trip == null -> {}
+                    tau < 0.5f -> top = ry - h0 * lerp(SIT, STAND, tau / 0.5f)                          // stand up
+                    tau < 1.5f -> { top = ry - h0 * STAND; x = lerp(sx, AISLE_X, tau - 0.5f) }            // squeeze to the aisle
+                    tau < 3.5f -> {                                                                        // walk out, towards you
+                        val feet = lerp(ry + h0 * (1 - STAND), EXIT_Y, (tau - 1.5f) / 2f)
+                        h = ELF_H * scaleAt(feet); top = feet - h + sin(ct * 14f) * 1.5f; x = AISLE_X; img = v.front; depth = 999f
+                    }
+                    tau < 6.5f -> visible = false                                                          // getting snacks!
+                    tau < 8.5f -> {                                                                        // walk back in with popcorn
+                        val feet = lerp(EXIT_Y, ry + h0 * (1 - STAND), (tau - 6.5f) / 2f)
+                        h = ELF_H * scaleAt(feet); top = feet - h + sin(ct * 14f) * 1.5f; x = AISLE_X; depth = 999f; carrying = true
+                    }
+                    tau < 9.5f -> { top = ry - h0 * STAND; x = lerp(AISLE_X, sx, tau - 8.5f); carrying = true }
+                    else -> top = ry - h0 * lerp(STAND, SIT, (tau - 9.5f) / 0.5f)                         // sit back down
+                }
+                if (!visible) continue
+                val w = h * img.width / img.height
+                items.add(depth to {
+                    sprite(img, Offset((x - w / 2) * u, top * u), h * u)
+                    if (carrying) sprite(popcorn, Offset((x + w * 0.25f) * u, (top + h * 0.45f) * u), h * 0.3f * u)
+                })
+                if (trip == null && i in snacking) items.add(ry + 0.5f to { sprite(popcorn, Offset((x + w * 0.22f) * u, (ry - h0 * 0.2f) * u), h0 * 0.26f * u) })
+            }
+            items.sortedBy { it.first }.forEach { it.second() }
+            // light from the projector behind you
+            val beam = androidx.compose.ui.graphics.Path().apply {
+                moveTo(ROOM_W / 2 * u, (ROOM_H + 20) * u); lineTo((ROOM_W - 292f) / 2 * u, 12 * u); lineTo((ROOM_W + 292f) / 2 * u, 12 * u); close()
+            }
+            drawPath(beam, Color.White.copy(alpha = 0.05f))
+        }
+        val you = audience.first { it.you }
+        Box(Modifier.offset((seatX(2, you.seat) - 18).dp, (rowY[2] - ELF_H * rowScale[2] * SIT - 20).dp)) { Tag("You", partyPink, 11) }
     }
 }
 

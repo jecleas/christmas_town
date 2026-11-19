@@ -24,8 +24,8 @@ import kotlinx.serialization.json.Json
 
 sealed interface Overlay {
     data object None : Overlay
-    data class Paid(val newLevel: Int?) : Overlay
-    data class Morning(val day: Int, val worked: Boolean) : Overlay
+    data class Paid(val newLevel: Int?, val earned: Int = 0) : Overlay
+    data class Morning(val day: Int, val worked: Boolean, val interest: Int = 0) : Overlay
     data object ChristmasEve : Overlay
     data object Won : Overlay
 }
@@ -92,6 +92,12 @@ sealed interface Overlay {
     val moviesSeen: Set<String> = emptySet(),
     val balloonBest: Int = 0,
     val juiceShared: Set<String> = emptySet(),
+    // Pay: every 2 jobs = $2,000, sleigh = $1,000 extra (all reset each day)
+    val paidPairs: Int = 0,
+    val sleighBonusPaid: Boolean = false,
+    val earnedToday: Int = 0,
+    // Bank
+    val bankSaved: Int = 0,
 )
 
 /** Stickers you've earned just by what's in your save (things you own, pets, friends...). */
@@ -206,14 +212,33 @@ class GameState(private val prefs: SharedPreferences) {
 
     private fun progress(kind: JobKind, amount: Int = 1) {
         if (s.paidToday) return
+        val wasDone = s.jobs.firstOrNull { it.kind == kind }?.finished == true
         update { copy(jobs = jobs.map { if (it.kind == kind) it.copy(done = (it.done + amount).coerceAtMost(it.goal)) else it }) }
-        if (s.jobs.all { it.finished }) payDay()
+        if (!wasDone && s.jobs.firstOrNull { it.kind == kind }?.finished == true) jobFinished(kind)
     }
 
-    private fun payDay() {
+    /** Pay as you go: every 2 finished jobs pays $2,000, and the sleigh deliveries pay $1,000 extra. */
+    private fun jobFinished(kind: JobKind) {
+        val pairs = jobsDone / 2
+        val forPairs = (pairs - s.paidPairs).coerceAtLeast(0) * PAY_PER_TWO_JOBS
+        val sleigh = if (kind == JobKind.Deliver && !s.sleighBonusPaid) SLEIGH_BONUS else 0
+        val earned = forPairs + sleigh
+        update { copy(money = money + earned, paidPairs = maxOf(paidPairs, pairs), sleighBonusPaid = sleighBonusPaid || sleigh > 0, earnedToday = earnedToday + earned) }
+        if (s.jobs.all { it.finished }) { dayDone(earned); return }
+        when {
+            forPairs > 0 && sleigh > 0 -> say("Santa paid you ${money(forPairs)} for 2 jobs + ${money(sleigh)} sleigh bonus! 💰🛷")
+            forPairs > 0 -> say("2 jobs done! Santa paid you ${money(forPairs)}! 💰")
+            sleigh > 0 -> say("Sleigh bonus! Santa paid you ${money(sleigh)} extra! 🛷💰")
+            else -> say("Job done! ✅ Finish one more to get ${money(PAY_PER_TWO_JOBS)}!")
+        }
+        Audio.play(if (earned > 0) Sfx.Coins else Sfx.Ding)
+    }
+
+    /** Every job finished: the day counts toward levelling up and Christmas Eve. */
+    private fun dayDone(earned: Int) {
         val before = level
-        update { copy(money = money + PAY, paidToday = true, workdays = workdays + 1) }
-        overlay = Overlay.Paid(if (level > before) level else null)
+        update { copy(paidToday = true, workdays = workdays + 1) }
+        overlay = Overlay.Paid(if (level > before) level else null, earned)
         Audio.play(if (level > before) Sfx.LevelUp else Sfx.Coins)
         if (level >= 3) update { copy(plots = plots + (plots.size until 9).map { Plot(it) }) }
     }
@@ -224,14 +249,15 @@ class GameState(private val prefs: SharedPreferences) {
 
     fun sleep() {
         val worked = s.paidToday
+        val interest = bankInterest(s.bankSaved)
         update {
             copy(
                 day = day + 1, energy = 100, paidToday = false, fed = emptySet(), brushed = emptySet(),
                 talkedToday = emptySet(), jobs = jobsFor(levelFor(workdays)), kids = makeKids(listOf(5, 5, 5, 5, 5, 5, 6, 6)[levelFor(workdays) - 1]), kidIndex = 0,
-                washed = emptySet(), juiceShared = emptySet(),
+                washed = emptySet(), juiceShared = emptySet(), paidPairs = 0, sleighBonusPaid = false, earnedToday = 0, bankSaved = bankSaved + interest,
             )
         }
-        overlay = Overlay.Morning(s.day, worked)
+        overlay = Overlay.Morning(s.day, worked, interest)
         place = null
     }
 
@@ -547,7 +573,7 @@ class GameState(private val prefs: SharedPreferences) {
     // MARK: Shop
 
     private fun pay(price: Int): Boolean {
-        if (s.money < price) { say("Not enough money! 💸 Work for Santa to earn \$1,000 a day."); Audio.play(Sfx.Oops); return false }
+        if (s.money < price) { say("Not enough money! 💸 Work for Santa: every 2 jobs pays \$2,000."); Audio.play(Sfx.Oops); return false }
         update { copy(money = money - price) }
         Audio.play(Sfx.Coins)
         return true
@@ -642,6 +668,26 @@ class GameState(private val prefs: SharedPreferences) {
     fun throwParty(reward: Item) {
         update { copy(partyDone = true, owned = owned.add(reward, 1), hearts = hearts.add("Twinkle", 1).mapValues { it.value.coerceAtMost(5) }) }
         say("Best party ever! 🎉 You got a ${reward.title} for your house!")
+    }
+
+    // MARK: Bank
+
+    /** Put money in the bank. Returns how much went in. */
+    fun deposit(amount: Int): Int {
+        val n = amount.coerceAtMost(s.money)
+        if (n <= 0) { say("Your pockets are empty! 💸"); Audio.play(Sfx.Oops); return 0 }
+        update { copy(money = money - n, bankSaved = bankSaved + n) }
+        Audio.play(Sfx.Coins)
+        return n
+    }
+
+    /** Take money out of the bank. Returns how much came out. */
+    fun withdraw(amount: Int): Int {
+        val n = amount.coerceAtMost(s.bankSaved)
+        if (n <= 0) { say("There's nothing saved in the bank yet! 🏦"); Audio.play(Sfx.Oops); return 0 }
+        update { copy(money = money + n, bankSaved = bankSaved - n) }
+        Audio.play(Sfx.Coins)
+        return n
     }
 
     // MARK: Party Place

@@ -260,8 +260,8 @@ object ElfBrain {
             has(t, "what do you do", "your job", "what's your job", "whats your job") ->
                 when (elf) { "Jingle" -> "I make toys! Trains, robots, teddy bears... ALL the toys! 🔧"; "Twinkle" -> "I plan the BEST parties in the North Pole ✨🎉"; "Pepper" -> "I bake cookies for Santa and everyone! 🍪"; "Holly" -> "I invent things! Toy machines, snow cannons, self-stirring bowls... 🔬"; "Frost" -> "I make snow sculptures and tell the BEST jokes ⛄😆"; else -> "I feed and brush the reindeer. They're my best friends 🦌🥕" }
             has(t, "money", "paid", "pay", "rich", "coins", "dollars") ->
-                if (s.paidToday) "You already got your ${money(PAY)} today! 💰 Spend it on something fun in the Shop!"
-                else "Santa pays ${money(PAY)} when you finish ALL your jobs. You have ${jobsLeft.size} left today! 📋"
+                if (s.paidToday) "You earned ${money(s.earnedToday)} today! 💰 Spend it in the Shop, or save it in the Bank!"
+                else "Santa pays ${money(PAY_PER_TWO_JOBS)} for every 2 jobs, and ${money(SLEIGH_BONUS)} extra for the sleigh! You have ${jobsLeft.size} jobs left today! 📋"
             has(t, "help", "what should i do", "what do i do", "stuck", "how do i", "confused", "what now") ->
                 if (jobsLeft.isEmpty()) "You're all done for today! 🎉 Go to sleep 💤 to start a new day, or decorate your house!"
                 else "Next up: ${jobsLeft.first().text}! ${jobsLeft.first().kind.emoji} Tap the icons on the main screen to get there."

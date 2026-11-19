@@ -122,7 +122,7 @@ fun WrapGame(game: GameState) {
             Txt("Wrapped presents: ${game.s.wrapped} 🎁", 17)
             val owned = Toy.entries.filter { game.s.toys.n(it) > 0 }
             if (owned.isEmpty()) {
-                Bubble("You need a toy to wrap! Make one in the 🔨 Make tab first.", 300.dp)
+                Bubble("You need a toy to wrap! Go back and make one first 🔨", 300.dp)
             } else {
                 Txt("Pick a toy to wrap!", 19)
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {

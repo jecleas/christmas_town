@@ -97,6 +97,16 @@ object Sprites {
         return bitmap("elf|$look", rows, elfColors(look))
     }
 
+    /** The same elf seen from behind: back of the head, same hair, outfit and hat. */
+    fun elfBack(look: ElfLook): ImageBitmap {
+        var rows = rows("elf_back")
+        look.outfit.sprite?.let { rows = overlay(rows, rows(it)) }
+        rows = overlay(rows, rows(look.hairStyle.sprite))
+        if (look.hairStyle == HairStyle.Long) rows = overlay(rows, rows("hairback_long"))
+        look.hat.sprite?.let { rows = overlay(rows, rows(it)) }
+        return bitmap("elfback|$look", rows, elfColors(look))
+    }
+
     // MARK: Reindeer (with their decorations)
 
     fun reindeer(name: String, decos: Set<Deco>): ImageBitmap {

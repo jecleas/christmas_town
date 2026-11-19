@@ -12,7 +12,20 @@ class RulesTest {
 
     @Test fun startsWithAThousandDollars() = assertEquals(1000, Save().money)
 
-    @Test fun payIsAThousand() = assertEquals(1000, PAY)
+    @Test fun payIsTwoThousandPerTwoJobsPlusSleighBonus() {
+        assertEquals(2000, PAY_PER_TWO_JOBS)
+        assertEquals(1000, SLEIGH_BONUS)
+    }
+
+    @Test fun bankAddsFiveDollarsPerHundredUpTo500() {
+        assertEquals(0, bankInterest(99))
+        assertEquals(50, bankInterest(1000))
+        assertEquals(500, bankInterest(1_000_000))
+        // an old save has nothing in the bank and no pay counted yet today
+        val old = json.decodeFromString<Save>("""{"name":"Lexi","money":4321}""")
+        assertEquals(0, old.bankSaved)
+        assertEquals(0, old.paidPairs)
+    }
 
     @Test fun christmasEveAfterTenWorkdays() = assertEquals(10, CHRISTMAS_EVE_WORKDAYS)
 
