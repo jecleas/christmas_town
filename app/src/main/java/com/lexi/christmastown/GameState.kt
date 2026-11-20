@@ -715,13 +715,30 @@ class GameState(private val prefs: SharedPreferences) {
         }
     }
 
-    /** Pay for a movie ticket. Returns true if you can go in. */
-    fun buyTicket(m: Movie): Boolean {
-        if (!pay(m.price)) return false
-        update { copy(moviesSeen = moviesSeen + m.title) }
+    /** Pay for your ticket and one for each friend you bring. Friends you bring get +1 💖. */
+    fun buyTickets(m: Movie, friends: List<Npc>): Boolean {
+        if (!pay(m.price * (1 + friends.size))) return false
+        update { copy(moviesSeen = moviesSeen + m.title, hearts = friends.fold(hearts) { h, f -> h.add(f.name, 1) }.mapValues { it.value.coerceAtMost(5) }) }
         sticker("movie")
-        say("Enjoy the movie! 🍿")
+        say(if (friends.isEmpty()) "Here's your ticket! 🎟" else "Tickets for everyone! Your friends are so happy you invited them 💖")
+        friends.forEach { checkBestFriend(it) }
         return true
+    }
+
+    /** Buy snacks at the cinema snack bar. */
+    fun buySnacks(order: Map<MovieSnack, Int>): Boolean {
+        val total = order.entries.sumOf { it.key.price * it.value }
+        if (total == 0) return true
+        if (!pay(total)) return false
+        say("Yum! Enjoy your snacks! 🍿🧃")
+        return true
+    }
+
+    /** Munch a snack during the movie: a little energy. */
+    fun munch(snack: MovieSnack) {
+        update { copy(energy = (energy + snack.energy).coerceAtMost(100)) }
+        Audio.play(Sfx.Munch)
+        say("Munch munch! ${snack.title} +${snack.energy} ⚡")
     }
 
     fun balloonsDone(popped: Int) {

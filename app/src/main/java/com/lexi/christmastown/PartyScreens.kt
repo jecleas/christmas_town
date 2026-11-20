@@ -384,42 +384,167 @@ private const val SCENE_SECONDS = 5.5f
 private const val SCREEN_W = 390f
 private const val SCREEN_H = 280f
 
+private enum class CinemaStep(val title: String) { Pick("🎬 Movie"), Friends("👫 Friends"), Seats("💺 Seats"), Snacks("🍿 Snacks"), Watch("") }
+
+/** Who's in your movie group: you first, then the friends you brought, each with a seat. */
+private class Moviegoer(val look: ElfLook, val name: String, val seat: Pair<Int, Int>)
+
 @Composable
 private fun Cinema(game: GameState, setBusy: (Boolean) -> Unit) {
-    var watching by remember { mutableStateOf<Movie?>(null) }
-    val m = watching
-    if (m == null) {
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Px("popcorn", 44.dp)
-                Txt("Christmas Movie Night!", 22, Color.White)
-                Px("popcorn", 44.dp)
+    var step by remember { mutableStateOf(CinemaStep.Pick) }
+    var movie by remember { mutableStateOf(movies.first()) }
+    val friends = remember { mutableStateListOf<Npc>() }
+    val seats = remember { mutableStateListOf<Pair<Int, Int>>() }
+    val order = remember { androidx.compose.runtime.mutableStateMapOf<MovieSnack, Int>() }
+    fun go(to: CinemaStep) { step = to; setBusy(to != CinemaStep.Pick) }
+
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (step != CinemaStep.Pick && step != CinemaStep.Watch) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Btn("←", Pal.red, 16, Modifier.width(54.dp)) { go(CinemaStep.entries[step.ordinal - 1]) }
+                for (s in listOf(CinemaStep.Friends, CinemaStep.Seats, CinemaStep.Snacks)) Tag(s.title, if (s == step) partyPink else Pal.ink.copy(alpha = 0.5f), 14)
             }
-            Txt("Buy a ticket to watch a movie with your friends. Popcorn is free! 🍿", 15, Color.White, align = TextAlign.Center)
-            for (movie in movies) {
-                Row(Modifier.fillMaxWidth().panel(Color.White).padding(8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Box(Modifier.size(64.dp, 76.dp).background(Pal.night, RoundedCornerShape(6.dp)), contentAlignment = Alignment.Center) { Px(movie.poster, 52.dp) }
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        Txt(movie.title, 17)
-                        if (movie.title in game.s.moviesSeen) Tag("Watched ✓", Pal.green, 12)
-                    }
-                    Btn("🎟 ${money(movie.price)}", Pal.red, 16, Modifier.width(100.dp)) {
-                        if (game.buyTicket(movie)) { watching = movie; setBusy(true) }
-                    }
-                }
+            Txt("🎬 ${movie.title}", 17, Color.White, align = TextAlign.Center)
+        }
+        when (step) {
+            CinemaStep.Pick -> MovieList(game) { m -> movie = m; friends.clear(); seats.clear(); order.clear(); go(CinemaStep.Friends) }
+            CinemaStep.Friends -> BringFriends(game, movie, friends) { seats.clear(); go(CinemaStep.Seats) }
+            CinemaStep.Seats -> PickSeats(game, movie, friends, seats) { if (game.buyTickets(movie, friends.toList())) go(CinemaStep.Snacks) }
+            CinemaStep.Snacks -> SnackBar(order) { if (game.buySnacks(order.toMap())) go(CinemaStep.Watch) }
+            CinemaStep.Watch -> {
+                val group = listOf(Moviegoer(game.s.look, "You", seats[0])) + friends.mapIndexed { i, f -> Moviegoer(f.look, f.name, seats[i + 1]) }
+                val snacks = remember { order.flatMap { (s, n) -> List(n) { s } }.mapIndexed { i, s -> (i % group.size) to s } }
+                MoviePlayer(game, movie, group, snacks) { go(CinemaStep.Pick) }
             }
         }
-    } else {
-        MoviePlayer(game, m) { watching = null; setBusy(false) }
     }
 }
 
 @Composable
-private fun MoviePlayer(game: GameState, movie: Movie, onLeave: () -> Unit) {
+private fun MovieList(game: GameState, onPick: (Movie) -> Unit) {
+    Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Px("popcorn", 44.dp); Txt("Christmas Movie Night!", 22, Color.White); Px("popcorn", 44.dp)
+        }
+        Txt("Pick a movie! Then bring friends, choose your seats and grab some snacks 🍿", 15, Color.White, align = TextAlign.Center)
+        for (movie in movies) {
+            Row(Modifier.fillMaxWidth().squish { onPick(movie) }.panel(Color.White).padding(8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Box(Modifier.size(64.dp, 76.dp).background(Pal.night, RoundedCornerShape(6.dp)), contentAlignment = Alignment.Center) { Px(movie.poster, 52.dp) }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Txt(movie.title, 17)
+                    Txt("🎟 ${money(movie.price)} a ticket", 14, Pal.brown)
+                    if (movie.title in game.s.moviesSeen) Tag("Watched ✓", Pal.green, 12)
+                }
+                Txt("▶", 26, partyPink)
+            }
+        }
+    }
+}
+
+@Composable
+private fun BringFriends(game: GameState, movie: Movie, friends: MutableList<Npc>, onNext: () -> Unit) {
+    Column(Modifier.fillMaxWidth().panel().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Txt("Who do you want to bring?", 20, partyPink)
+        Txt("Tap up to $MAX_MOVIE_FRIENDS friends. Bringing a friend makes you better friends (+1 💖)!", 14, Pal.brown, align = TextAlign.Center)
+        for (row in npcs.chunked(3)) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            for (npc in row) {
+                val coming = npc in friends
+                Column(
+                    Modifier.width(116.dp).squish {
+                        if (coming) friends.remove(npc)
+                        else if (friends.size >= MAX_MOVIE_FRIENDS) game.say("You can bring up to $MAX_MOVIE_FRIENDS friends! 🎟")
+                        else { friends.add(npc); Audio.play(Sfx.Ding) }
+                    }.panel(if (coming) hex(0xFFE1EE) else Color.White, if (coming) partyPink else Pal.ink).padding(4.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    if (coming) Bob(4f, 500) { ElfPx(npc.look, 74.dp) } else ElfPx(npc.look, 74.dp)
+                    Txt(npc.name, 15)
+                    Txt(if (coming) "Coming! 🎉" else hearts(game.hearts(npc)), if (coming) 13 else 8, if (coming) partyPink else Pal.ink)
+                }
+            }
+        }
+        val n = 1 + friends.size
+        Txt("🎟 $n ticket${if (n > 1) "s" else ""} × ${money(movie.price)} = ${money(n * movie.price)}", 18)
+        Btn(if (friends.isEmpty()) "Just me! Choose seats 💺" else "Choose our seats 💺", partyPink, 18, Modifier.fillMaxWidth(), onClick = onNext)
+    }
+}
+
+@Composable
+private fun PickSeats(game: GameState, movie: Movie, friends: List<Npc>, seats: MutableList<Pair<Int, Int>>, onBuy: () -> Unit) {
+    val taken = remember(movie) { takenSeats(movie, game.s.day) }
+    val people = listOf(game.s.look to "You") + friends.map { it.look to it.name }
+    Column(Modifier.fillMaxWidth().panel().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        val next = people.getOrNull(seats.size)
+        Txt(if (next == null) "Everyone has a seat! 💺" else if (seats.isEmpty()) "Tap a seat for YOU!" else "Now tap a seat for ${next.second}!", 19, partyPink, align = TextAlign.Center)
+        // the screen is at the top, the back row at the bottom
+        Box(Modifier.width(320.dp).height(18.dp).background(hex(0xDDEBF5), RoundedCornerShape(4.dp)).border(2.dp, Pal.ink, RoundedCornerShape(4.dp)), contentAlignment = Alignment.Center) {
+            Txt("SCREEN", 12, Pal.ink)
+        }
+        for (row in cinemaRowSeats.indices) {
+            Row(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
+                Txt("${'A' + row}", 13, Pal.brown, modifier = Modifier.width(14.dp))
+                for (seat in 0 until cinemaRowSeats[row]) {
+                    val here = row to seat
+                    val who = seats.indexOf(here)
+                    val isTaken = here in taken
+                    Box(
+                        Modifier.size(44.dp, 48.dp)
+                            .squish(enabled = !isTaken) {
+                                if (who >= 0) seats.removeAt(who)
+                                else if (seats.size < people.size) { seats.add(here); Audio.play(Sfx.Pop) }
+                                else game.say("Everyone has a seat! Tap one of yours to move it.")
+                            }
+                            .panel(when { who >= 0 -> hex(0xFFE1EE); isTaken -> hex(0x8D96A8); else -> hex(0xB0283C) }, if (who >= 0) partyPink else Pal.ink, 8.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        when {
+                            who >= 0 -> ElfPx(people[who].first, 40.dp)
+                            isTaken -> Px(Sprites.elfBack(ElfLook(hairColor = (row * 7 + seat) % ElfColors.hairs.size)), 38.dp, alpha = 0.5f)
+                        }
+                    }
+                }
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(14.dp).background(hex(0xB0283C), RoundedCornerShape(3.dp))); Txt(" Free", 12) }
+            Row(verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(14.dp).background(hex(0x8D96A8), RoundedCornerShape(3.dp))); Txt(" Taken", 12) }
+            Row(verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(14.dp).background(hex(0xFFE1EE), RoundedCornerShape(3.dp)).border(1.dp, partyPink, RoundedCornerShape(3.dp))); Txt(" Yours", 12) }
+        }
+        Txt("Row C is the back row. Tap your seat again to change it.", 13, Pal.brown, align = TextAlign.Center)
+        val total = people.size * movie.price
+        Btn("🎟 Buy ${people.size} ticket${if (people.size > 1) "s" else ""}: ${money(total)}", Pal.red, 18, Modifier.fillMaxWidth(), enabled = seats.size == people.size, onClick = onBuy)
+    }
+}
+
+@Composable
+private fun SnackBar(order: MutableMap<MovieSnack, Int>, onDone: () -> Unit) {
+    Column(Modifier.fillMaxWidth().panel().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Bob(3f, 800) { ElfPx(npcs.first { it.name == "Pepper" }.look, 70.dp) }
+            Bubble("Snacks for the movie? Popcorn's fresh! 🍿", 230.dp)
+        }
+        for (s in MovieSnack.entries) {
+            val n = order[s] ?: 0
+            Row(Modifier.fillMaxWidth().panel(if (n > 0) hex(0xFFE1EE) else Color.White).padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Px(s.sprite, 36.dp)
+                Column(Modifier.weight(1f)) { Txt(s.title, 16); Txt("${money(s.price)} · +${s.energy} ⚡", 12, Pal.brown) }
+                Btn("−", Pal.night, 18, Modifier.width(48.dp), enabled = n > 0) { if (n <= 1) order.remove(s) else order[s] = n - 1 }
+                Txt("$n", 18, align = TextAlign.Center, modifier = Modifier.width(26.dp))
+                Btn("+", Pal.green, 18, Modifier.width(48.dp), enabled = n < 9) { order[s] = n + 1 }
+            }
+        }
+        val total = order.entries.sumOf { it.key.price * it.value }
+        Btn(if (total > 0) "Buy snacks ${money(total)} & go in! 🎬" else "No snacks, let's go in! 🎬", partyPink, 17, Modifier.fillMaxWidth(), onClick = onDone)
+    }
+}
+
+@Composable
+private fun MoviePlayer(game: GameState, movie: Movie, group: List<Moviegoer>, bought: List<Pair<Int, MovieSnack>>, onLeave: () -> Unit) {
     GameSong(game, Music.SilentNight)
     var scene by remember { mutableIntStateOf(0) }
     var st by remember { mutableFloatStateOf(0f) }     // seconds into this scene
     val ended = scene >= movie.scenes.size
+    val snacks = remember { mutableStateListOf<Pair<Int, MovieSnack>>().apply { addAll(bought) } }   // (who has it, what)
 
     LaunchedEffect(scene) {
         if (scene >= movie.scenes.size) return@LaunchedEffect
@@ -428,11 +553,17 @@ private fun MoviePlayer(game: GameState, movie: Movie, onLeave: () -> Unit) {
         while (st < SCENE_SECONDS) withFrameMillis { st = (it - start) / 1000f }
         scene++
     }
+    // your friends munch their snacks now and then
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(6000L + Random.nextLong(4000))
+            snacks.firstOrNull { it.first > 0 }?.let { snacks.remove(it); Audio.play(Sfx.Munch) }
+        }
+    }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Txt("🎬 ${movie.title}", 19, Color.White, align = TextAlign.Center)
-        // the cinema, seen from your seat in the back row
-        Cinema3D(game, movie) {
+        Cinema3D(game, movie, group, snacks) {
             if (ended) {
                 Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Txt("✨ THE END ✨", 34, Pal.gold)
@@ -446,8 +577,12 @@ private fun MoviePlayer(game: GameState, movie: Movie, onLeave: () -> Unit) {
         val shown = if (ended) caption else caption.take((st * 28).toInt() + 1)
         Txt(shown, 17, align = TextAlign.Center, modifier = Modifier.fillMaxWidth().height(72.dp).panel().padding(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (!ended) Btn("⏭ Next", Pal.blue, 16, Modifier.width(130.dp)) { scene++ }
-            Btn(if (ended) "Back to the party 🎉" else "🚪 Leave", if (ended) partyPink else Pal.red, 16, Modifier.width(if (ended) 240.dp else 130.dp)) { onLeave() }
+            val mine = snacks.firstOrNull { it.first == 0 }
+            if (!ended) Btn("⏭ Next", Pal.blue, 16, Modifier.width(110.dp)) { scene++ }
+            if (mine != null) Btn(Pal.gold, Modifier.width(130.dp), onClick = { snacks.remove(mine); game.munch(mine.second) }) {
+                Px(mine.second.sprite, 22.dp); Txt("Munch!", 16, Pal.ink)
+            }
+            Btn(if (ended) "Back to the party 🎉" else "🚪 Leave", if (ended) partyPink else Pal.red, 16, Modifier.width(if (ended) 240.dp else 110.dp)) { onLeave() }
         }
         if (!ended) Txt("Scene ${scene + 1} of ${movie.scenes.size}", 13, Color.White)
     }
@@ -495,10 +630,10 @@ private const val SIT = 0.64f            // how much of a seated elf shows above
 private const val STAND = 0.95f
 private val rowY = listOf(258f, 318f, 396f)        // top of each row's seat backs, far → near
 private val rowScale = listOf(0.55f, 0.75f, 1.05f)
-private val rowSeats = listOf(7, 6, 5)
+private val rowSeats = cinemaRowSeats
 private val screenScale = 292f / SCREEN_W
 
-private class Viewer(val front: ImageBitmap, val back: ImageBitmap, val row: Int, val seat: Int, val you: Boolean = false)
+private class Viewer(val front: ImageBitmap, val back: ImageBitmap, val row: Int, val seat: Int, val member: Int = -1) { val you get() = member == 0 }
 private class Trip(val who: Int, val start: Float)
 
 private fun seatSpan(row: Int) = (20f + (2 - row) * 14f) to (AISLE_X - 26f)
@@ -515,18 +650,14 @@ private fun randomLook(r: Random) = ElfLook(
 )
 
 @Composable
-private fun Cinema3D(game: GameState, movie: Movie, screen: @Composable androidx.compose.foundation.layout.BoxScope.() -> Unit) {
-    val audience = remember(movie) {
+private fun Cinema3D(game: GameState, movie: Movie, group: List<Moviegoer>, snacks: List<Pair<Int, MovieSnack>>, screen: @Composable androidx.compose.foundation.layout.BoxScope.() -> Unit) {
+    val audience = remember(movie, group) {
         val r = Random(movie.title.hashCode() + game.s.day)
-        val guests = game.partyGuests
-        fun v(look: ElfLook, row: Int, seat: Int, you: Boolean = false) = Viewer(Sprites.elf(look), Sprites.elfBack(look), row, seat, you)
-        buildList {
-            add(v(game.s.look, 2, 2, you = true))
-            add(v(guests[0].look, 2, 1)); add(v(guests[1].look, 2, 3)); add(v(randomLook(r), 2, 0))
-            add(v(guests[2].look, 1, 3)); for (seat in listOf(0, 1, 4)) add(v(randomLook(r), 1, seat))
-            add(v(guests[3].look, 0, 2)); for (seat in listOf(0, 1, 4, 5, 6)) add(v(randomLook(r), 0, seat))
-        }
+        val mine = group.map { it.seat }.toSet()
+        group.mapIndexed { i, g -> Viewer(Sprites.elf(g.look), Sprites.elfBack(g.look), g.seat.first, g.seat.second, member = i) } +
+            takenSeats(movie, game.s.day).filter { it !in mine }.map { (row, seat) -> randomLook(r).let { Viewer(Sprites.elf(it), Sprites.elfBack(it), row, seat) } }
     }
+    val snackImages = remember { MovieSnack.entries.associateWith { Sprites.named(it.sprite) } }
     var ct by remember { mutableFloatStateOf(0f) }
     var nextTrip by remember { mutableFloatStateOf(2f) }
     val trips = remember { mutableStateListOf<Trip>() }
@@ -605,6 +736,14 @@ private fun Cinema3D(game: GameState, movie: Movie, screen: @Composable androidx
                     if (carrying) sprite(popcorn, Offset((x + w * 0.25f) * u, (top + h * 0.45f) * u), h * 0.3f * u)
                 })
                 if (trip == null && i in snacking) items.add(ry + 0.5f to { sprite(popcorn, Offset((x + w * 0.22f) * u, (ry - h0 * 0.2f) * u), h0 * 0.26f * u) })
+                // snacks you bought, held up beside each of you
+                if (trip == null && v.member >= 0) {
+                    val held = snacks.filter { it.first == v.member }.take(2)
+                    for ((k, sn) in held.withIndex()) {
+                        val side = if (k == 0) -0.42f else 0.22f
+                        items.add(ry + 0.5f to { sprite(snackImages.getValue(sn.second), Offset((x + w * side) * u, (ry - h0 * 0.2f) * u), h0 * 0.26f * u) })
+                    }
+                }
             }
             items.sortedBy { it.first }.forEach { it.second() }
             // light from the projector behind you
@@ -614,7 +753,7 @@ private fun Cinema3D(game: GameState, movie: Movie, screen: @Composable androidx
             drawPath(beam, Color.White.copy(alpha = 0.05f))
         }
         val you = audience.first { it.you }
-        Box(Modifier.offset((seatX(2, you.seat) - 18).dp, (rowY[2] - ELF_H * rowScale[2] * SIT - 20).dp)) { Tag("You", partyPink, 11) }
+        Box(Modifier.offset((seatX(you.row, you.seat) - 16).dp, (rowY[you.row] - ELF_H * rowScale[you.row] * SIT - 18).dp)) { Tag("You", partyPink, 11) }
     }
 }
 

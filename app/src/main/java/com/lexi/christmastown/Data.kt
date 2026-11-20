@@ -475,6 +475,29 @@ val partyLines = listOf(
 class Actor(val sprite: String, val x: Float, val h: Int, val up: Float = 0f, val dx: Float = 0f, val dy: Float = 0f, val flip: Boolean = false)
 class Scene(val caption: String, val sky: Long, val ground: Long, val actors: List<Actor>, val snow: Boolean = true)
 
+/** Snacks and drinks from the cinema snack bar, to munch during the movie. */
+enum class MovieSnack(val title: String, val price: Int, val energy: Int, val sprite: String) {
+    Popcorn("Popcorn", 4, 6, "popcorn"),
+    Candy("Candy", 2, 4, "candy"),
+    Cocoa("Hot Cocoa", 3, 5, "cocoa_mug"),
+    OrangeJuice("Orange Juice", 2, 4, "juice_orange"),
+    GrapeJuice("Grape Juice", 2, 4, "juice_grape"),
+    FruitPunch("Fruit Punch", 3, 5, "juice_punch"),
+}
+
+/** You can bring up to this many elf friends to a movie. */
+const val MAX_MOVIE_FRIENDS = 3
+
+/** Cinema rows, far (front, near the screen) to near (the back row). */
+val cinemaRowSeats = listOf(7, 6, 5)
+
+/** Seats other elves have already taken for this movie today. Always leaves plenty free. */
+fun takenSeats(movie: Movie, day: Int): Set<Pair<Int, Int>> {
+    val r = kotlin.random.Random(movie.title.hashCode() * 31 + day)
+    val all = cinemaRowSeats.flatMapIndexed { row, n -> (0 until n).map { row to it } }
+    return all.shuffled(r).take(7).toSet()
+}
+
 /** "@me" in an actor means your own elf; "@Twinkle" (etc.) means that elf friend. */
 class Movie(val title: String, val price: Int, val poster: String, val scenes: List<Scene>)
 

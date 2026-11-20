@@ -6,7 +6,7 @@ A cute chibi pixel-art game made for Lexi (a kid) and her dad: you're an elf wor
 - `Sprites.kt`: loads that file and draws sprites with sharp pixels (`Px`, `ElfPx`).
 - `Data.kt`: game content (crops, cookies, toys, food, furniture, reindeer, levels, jobs, kids for Santa's list, elf friends).
 - `GameState.kt`: all rules. Everything saved lives in the `Save` data class (kotlinx.serialization → SharedPreferences). Add new fields with defaults so old saves still load.
-- Screens: `Ui.kt` (stage scaling, top bar, nav, pop-ups), `HomeScreen.kt`, `WorkScreens.kt`, `SantaScreens.kt`, `TownScreens.kt`, `PartyScreens.kt` (Party Place, Level 7: juice bar, balloon pop + memory games, friends, Christmas movies for $3–$6 watched from the back row), `BankScreen.kt` (Mr. Silverbell's bank: save money, take it out, +$5 per $100 each night).
+- Screens: `Ui.kt` (stage scaling, top bar, nav, pop-ups), `HomeScreen.kt`, `WorkScreens.kt`, `SantaScreens.kt`, `TownScreens.kt`, `PartyScreens.kt` (Party Place, Level 7: juice bar, balloon pop + memory games, friends, Christmas movies: pick a movie, bring up to 3 friends, choose seats, buy tickets ($3–$6 each) and snacks, then watch from your seats), `BankScreen.kt` (Mr. Silverbell's bank: save money, take it out, +$5 per $100 each night).
 
 Rules Lexi asked for: start with $1,000; every 2 jobs you finish pays $2,000 and finishing the sleigh deliveries pays $1,000 extra (finishing ALL the jobs makes the day count toward levels); no work = no pay; 5 levels unlock toys/recipes/reindeer/deliveries; Christmas Eve finale after 10 workdays.
 
