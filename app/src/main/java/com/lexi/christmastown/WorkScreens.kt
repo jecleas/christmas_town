@@ -23,6 +23,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -64,7 +65,7 @@ fun JobChip(game: GameState, kind: JobKind) {
 fun GreenhouseScreen(game: GameState) {
     val s = game.s
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Txt("Pick a seed, tap a pot to plant, water it, then pick your crops! 🌱", 15, align = TextAlign.Center)
+        WorkmateBar(game, Place.Greenhouse)
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             for (c in game.crops) {
                 val sel = game.selectedSeed == c
@@ -114,3 +115,27 @@ private fun PlotBox(p: Plot, now: Long, onTap: () -> Unit) {
     }
 }
 
+
+/** Your workmate at this job: tips when you tap them, a cheer when you finish, and a little help once a day. */
+@Composable
+fun WorkmateBar(game: GameState, place: Place) {
+    val w = workmateAt(place) ?: return
+    val npc = npcs.first { it.name == w.name }
+    var tip by remember(place) { mutableIntStateOf(0) }
+    var said by remember(place) { mutableStateOf<String?>(null) }
+    val cheer = game.workmateCheer?.takeIf { it.first == w.name }?.second
+    LaunchedEffect(cheer) { if (cheer != null) { kotlinx.coroutines.delay(4000); game.workmateCheer = null } }
+    Row(
+        Modifier.fillMaxWidth().panel(if (cheer != null) hex(0xD8F5DD) else Color.White).padding(6.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Box(Modifier.squish { tip++; said = w.tips[tip % w.tips.size]; game.chat(npc); Audio.play(Sfx.Message) }) {
+            Bob(if (cheer != null) 8f else 2f, if (cheer != null) 250 else 900) { ElfPx(npc.look, 56.dp) }
+        }
+        Column(Modifier.weight(1f)) {
+            Txt("${npc.name} · your workmate", 12, Pal.purple)
+            Txt(cheer ?: said ?: "Hi ${game.s.name}! ${w.tips.first()}", 14, if (cheer != null) Pal.darkGreen else Pal.ink)
+        }
+        Btn("🤝 Help", Pal.green, 14, Modifier.width(88.dp), enabled = w.name !in game.s.helpedBy) { game.workmateHelp(w) }
+    }
+}

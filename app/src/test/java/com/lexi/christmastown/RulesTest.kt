@@ -52,6 +52,12 @@ class RulesTest {
         assertTrue(old.homeGuests.isEmpty())
     }
 
+    @Test fun everyWorkplaceHasAWorkmateFriend() {
+        val places = listOf(Place.Greenhouse, Place.Bakery, Place.Stable, Place.Workshop, Place.SantaList, Place.Sleigh)
+        for (p in places) assertTrue(workmateAt(p) != null)
+        assertTrue(workmates.all { w -> npcs.any { it.name == w.name } && w.tips.isNotEmpty() })
+    }
+
     @Test fun christmasEveAfterTenWorkdays() = assertEquals(10, CHRISTMAS_EVE_WORKDAYS)
 
     @Test fun eightLevelsReachedBeforeChristmasEve() {

@@ -102,6 +102,9 @@ sealed interface Overlay {
     val homeGuests: List<String> = emptyList(),
     val visitedToday: Set<String> = emptySet(),
     val dancedDay: Int = 0,
+    // Workmates you worked with / who helped you today
+    val workedWith: Set<String> = emptySet(),
+    val helpedBy: Set<String> = emptySet(),
 )
 
 /** Stickers you've earned just by what's in your save (things you own, pets, friends...). */
@@ -224,6 +227,7 @@ class GameState(private val prefs: SharedPreferences) {
 
     /** Pay as you go: every 2 finished jobs pays $2,000, and the sleigh deliveries pay $1,000 extra. */
     private fun jobFinished(kind: JobKind) {
+        workTogether(kind)
         val pairs = jobsDone / 2
         val forPairs = (pairs - s.paidPairs).coerceAtLeast(0) * PAY_PER_TWO_JOBS
         val sleigh = if (kind == JobKind.Deliver && !s.sleighBonusPaid) SLEIGH_BONUS else 0
@@ -259,7 +263,7 @@ class GameState(private val prefs: SharedPreferences) {
             copy(
                 day = day + 1, energy = 100, paidToday = false, fed = emptySet(), brushed = emptySet(),
                 talkedToday = emptySet(), jobs = jobsFor(levelFor(workdays)), kids = makeKids(listOf(5, 5, 5, 5, 5, 5, 6, 6)[levelFor(workdays) - 1]), kidIndex = 0,
-                washed = emptySet(), juiceShared = emptySet(), paidPairs = 0, sleighBonusPaid = false, earnedToday = 0, bankSaved = bankSaved + interest, homeGuests = emptyList(), visitedToday = emptySet(),
+                washed = emptySet(), juiceShared = emptySet(), paidPairs = 0, sleighBonusPaid = false, earnedToday = 0, bankSaved = bankSaved + interest, homeGuests = emptyList(), visitedToday = emptySet(), workedWith = emptySet(), helpedBy = emptySet(),
             )
         }
         overlay = Overlay.Morning(s.day, worked, interest)
@@ -773,6 +777,38 @@ class GameState(private val prefs: SharedPreferences) {
 
     /** The Back button: places in town go back to the Town map, everything else to your house. */
     fun back() { place = if (place?.side == Side.Town || place == Place.House) Place.Town else null }
+
+    // MARK: Workmates
+
+    /** What a workmate just said when you finished a job together (shown at that workplace). */
+    var workmateCheer by mutableStateOf<Pair<String, String>?>(null)
+
+    /** Finishing a job together: your workmate cheers, and you become better friends (+1 💖 once a day). */
+    private fun workTogether(kind: JobKind) {
+        val w = workmateAt(placeFor(kind)) ?: return
+        workmateCheer = w.name to w.cheer
+        if (w.name in s.workedWith) return
+        update { copy(workedWith = workedWith + w.name, hearts = hearts.add(w.name, 1).mapValues { it.value.coerceAtMost(5) }) }
+        npcs.firstOrNull { it.name == w.name }?.let { checkBestFriend(it) }
+    }
+
+    /** Once a day, each workmate gives you a little help. */
+    fun workmateHelp(w: Workmate): Boolean {
+        if (w.name in s.helpedBy) { say("${w.name} already helped today. Ask again tomorrow! 💖"); return false }
+        update {
+            val base = copy(helpedBy = helpedBy + w.name)
+            when (w.place) {
+                Place.Greenhouse -> base.copy(crops = crops.add(Crop.Wheat, 2).add(Crop.Carrot, 2))
+                Place.Bakery -> base.copy(cookies = cookies.add(Cookie.entries.filter { it.unlockLevel <= levelFor(workdays) }.random(), 1))
+                Place.Stable -> base.copy(crops = crops.add(Crop.Carrot, 3))
+                Place.Workshop -> base.copy(toys = toys.add(Toy.Teddy, 1))
+                else -> base.copy(energy = (energy + 15).coerceAtMost(100))
+            }
+        }
+        say(w.help)
+        Audio.play(Sfx.Ding)
+        return true
+    }
 
     // MARK: Town & friends' houses
 

@@ -759,3 +759,53 @@ fun homeOf(npc: Npc): FriendHome {
 
 /** You can have this many friends over at your house at once. */
 const val MAX_HOME_GUESTS = 3
+
+// MARK: - Workmates: the friend who works next to you at each job
+
+class Workmate(val place: Place, val name: String, val tips: List<String>, val cheer: String, val help: String)
+
+/** Built on first use (lazy) so it never runs before the Place list exists. */
+val workmates: List<Workmate> by lazy { listOf(
+    Workmate(
+        Place.Greenhouse, "Nutmeg",
+        listOf("Plant a seed, then water it! Thirsty plants don't grow 💧", "Carrots are for the reindeer, wheat is for cookies 🌾🥕", "Pick crops when they're ready, then plant again!", "Out of seeds? Tinsel sells them in the Shop 🛍️"),
+        "Look at those crops grow! 🌱", "I picked extra for you! +2 wheat, +2 carrots 🌾🥕",
+    ),
+    Workmate(
+        Place.Bakery, "Pepper",
+        listOf("Stir quickly for a perfect batch! 🥄", "Every cookie needs wheat. Berries and choc chips make them extra yummy!", "Decorate them pretty, Santa loves sprinkles ✨", "Tired? A cookie gives you energy, but save some for Santa!"),
+        "Perfect batch, sweetie! 🍪", "I baked one just for you! +1 cookie 🍪",
+    ),
+    Workmate(
+        Place.Stable, "Sprout",
+        listOf("Every reindeer needs feeding AND brushing 🦌", "Rub back and forth to brush. They love it!", "Out of carrots? Grow some in the Greenhouse 🥕", "Happy reindeer fly better on the sleigh!"),
+        "The reindeer love you! 🦌💕", "I brought carrots from home! +3 carrots 🥕",
+    ),
+    Workmate(
+        Place.Workshop, "Jingle",
+        listOf("Tap fast to fill, then join the dots 1 to 5! 🧵", "Pick a colour you love for the paint 🎨", "Made toys go on the sleigh, or wrap them first 🎁", "New toys unlock when you level up!"),
+        "Toys done! High five! ✋", "I made a spare teddy for you! +1 teddy 🧸",
+    ),
+    Workmate(
+        Place.SantaList, "Maple",
+        listOf("Read what each kid did really carefully ✉️", "Helping, sharing and being kind are NICE 😇", "Being mean or messy is a bit naughty 😈", "Santa checks his list twice. So do we!"),
+        "Checked it twice! ✉️✅", "A kid sent you a thank-you letter! It makes you smile. +15 ⚡",
+    ),
+    Workmate(
+        Place.Sleigh, "Holly",
+        listOf("Steer around the clouds! ☁️", "Drop presents right down the chimneys 🎁", "Happy reindeer on your team make flying easier!", "I tuned the sleigh bells myself. Hear them jingle? 🔔"),
+        "Smooth flying! 🛷✨", "I made you a power snack for the flight! +15 ⚡",
+    ),
+) }
+
+fun workmateAt(p: Place) = workmates.firstOrNull { it.place == p }
+
+/** Which workplace a job happens at. */
+fun placeFor(kind: JobKind) = when (kind) {
+    JobKind.Bake -> Place.Bakery
+    JobKind.Toys, JobKind.Wrap -> Place.Workshop
+    JobKind.Reindeer -> Place.Stable
+    JobKind.SortList -> Place.SantaList
+    JobKind.Deliver -> Place.Sleigh
+    JobKind.Tree -> Place.Park
+}

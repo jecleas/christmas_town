@@ -51,6 +51,7 @@ fun StableScreen(game: GameState) {
     if (name != null && name in game.reindeer) { ReindeerCare(game, name) { caring = null }; return }
     val s = game.s
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        WorkmateBar(game, Place.Stable)
         JobChip(game, JobKind.Reindeer)
         Row(Modifier.panel().padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             Px("carrot", 24.dp); Txt("×${s.crops.n(Crop.Carrot)}  ·  🛷 Team ${game.teamPower}/${game.sleighTeam.size} happy  ·  Tap a reindeer!", 14)

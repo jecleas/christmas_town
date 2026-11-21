@@ -41,6 +41,7 @@ import kotlin.math.sin
 fun SantaListScreen(game: GameState) {
     var feedback by remember { mutableStateOf<String?>(null) }
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        WorkmateBar(game, Place.SantaList)
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Bob(3f, 900) { Px("santa", 150.dp) }
             Bubble(
@@ -81,6 +82,7 @@ fun SantaListScreen(game: GameState) {
 @Composable
 fun SleighScreen(game: GameState) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        WorkmateBar(game, Place.Sleigh)
         Box(Modifier.size(300.dp, 170.dp), contentAlignment = Alignment.BottomCenter) {
             Bob(5f, 900) {
                 Row(verticalAlignment = Alignment.Bottom) {

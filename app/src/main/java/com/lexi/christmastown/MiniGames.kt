@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -89,9 +90,10 @@ fun BakeryScreen(game: GameState) {
 
     if (house) { GingerbreadGame(game) { house = false }; return }
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        WorkmateBar(game, Place.Bakery)
         JobChip(game, JobKind.Bake)
         when (phase) {
-            BakePhase.Pick -> {
+            BakePhase.Pick -> Column(Modifier.heightIn(max = 560.dp).verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 RecipeList(game) { c ->
                     if (!game.canBake(c)) { game.say("Not enough ingredients! Grow some in the Greenhouse 🌱"); Audio.play(Sfx.Oops) }
                     else if (game.hasEnergy(5)) { cookie = c; stirs = 0; tops.clear(); icing = null; perfect = false; phase = BakePhase.Mix }
@@ -347,6 +349,7 @@ private val dotSpots = listOf(0.2f to 0.3f, 0.5f to 0.12f, 0.8f to 0.3f, 0.76f t
 fun WorkshopScreen(game: GameState) {
     var wrapping by remember { mutableStateOf(false) }
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        WorkmateBar(game, Place.Workshop)
         if (wrapping) {
             Btn("🔨 Back to making toys", Pal.red, 16, Modifier.width(260.dp)) { wrapping = false }
             WrapGame(game)
