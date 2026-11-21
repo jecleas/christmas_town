@@ -105,6 +105,7 @@ sealed interface Overlay {
     // Workmates you worked with / who helped you today
     val workedWith: Set<String> = emptySet(),
     val helpedBy: Set<String> = emptySet(),
+    val servedToday: Set<String> = emptySet(),
 )
 
 /** Stickers you've earned just by what's in your save (things you own, pets, friends...). */
@@ -263,7 +264,7 @@ class GameState(private val prefs: SharedPreferences) {
             copy(
                 day = day + 1, energy = 100, paidToday = false, fed = emptySet(), brushed = emptySet(),
                 talkedToday = emptySet(), jobs = jobsFor(levelFor(workdays)), kids = makeKids(listOf(5, 5, 5, 5, 5, 5, 6, 6)[levelFor(workdays) - 1]), kidIndex = 0,
-                washed = emptySet(), juiceShared = emptySet(), paidPairs = 0, sleighBonusPaid = false, earnedToday = 0, bankSaved = bankSaved + interest, homeGuests = emptyList(), visitedToday = emptySet(), workedWith = emptySet(), helpedBy = emptySet(),
+                washed = emptySet(), juiceShared = emptySet(), paidPairs = 0, sleighBonusPaid = false, earnedToday = 0, bankSaved = bankSaved + interest, homeGuests = emptyList(), visitedToday = emptySet(), workedWith = emptySet(), helpedBy = emptySet(), servedToday = emptySet(),
             )
         }
         overlay = Overlay.Morning(s.day, worked, interest)
@@ -808,6 +809,37 @@ class GameState(private val prefs: SharedPreferences) {
         say(w.help)
         Audio.play(Sfx.Ding)
         return true
+    }
+
+    // MARK: Talking & treats
+
+    /** The friend you're having a chat with (a pop-up over any screen), or null. */
+    var chatWith by mutableStateOf<String?>(null)
+
+    /** What each friend is holding right now (a treat you gave them). */
+    val holding = androidx.compose.runtime.mutableStateMapOf<String, Treat>()
+
+    /** Serve or share a treat. Cookies come from your cookie jar, cocoa from your snacks; tea is always free. */
+    fun serve(npc: Npc, t: Treat): String? {
+        when (t) {
+            Treat.Cookie -> {
+                if (s.cookies.values.sum() == 0) { say("No cookies! Bake some in the Bakery 🍪"); Audio.play(Sfx.Oops); return null }
+                giveCookie(npc)
+            }
+            Treat.Cocoa -> {
+                if (s.food.n(Food.HotCocoa) <= 0) { say("No hot cocoa! Buy some at Tinsel's Shop ☕"); Audio.play(Sfx.Oops); return null }
+                update { copy(food = food.add(Food.HotCocoa, -1)) }
+            }
+            Treat.Tea -> {}
+        }
+        holding[npc.name] = t
+        Audio.play(Sfx.Munch)
+        if (t != Treat.Cookie && npc.name !in s.servedToday) {
+            update { copy(servedToday = servedToday + npc.name, hearts = hearts.add(npc.name, 1).mapValues { it.value.coerceAtMost(5) }) }
+            checkBestFriend(npc)
+        }
+        chat(npc)
+        return treatThanks.random()
     }
 
     // MARK: Town & friends' houses

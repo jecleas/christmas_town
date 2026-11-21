@@ -136,6 +136,9 @@ fun WorkmateBar(game: GameState, place: Place) {
             Txt("${npc.name} · your workmate", 12, Pal.purple)
             Txt(cheer ?: said ?: "Hi ${game.s.name}! ${w.tips.first()}", 14, if (cheer != null) Pal.darkGreen else Pal.ink)
         }
-        Btn("🤝 Help", Pal.green, 14, Modifier.width(88.dp), enabled = w.name !in game.s.helpedBy) { game.workmateHelp(w) }
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Btn("💬 Talk", Pal.blue, 13, Modifier.width(86.dp)) { game.chatWith = w.name }
+            Btn("🤝 Help", Pal.green, 13, Modifier.width(86.dp), enabled = w.name !in game.s.helpedBy) { game.workmateHelp(w) }
+        }
     }
 }

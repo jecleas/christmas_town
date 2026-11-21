@@ -809,3 +809,18 @@ fun placeFor(kind: JobKind) = when (kind) {
     JobKind.Deliver -> Place.Sleigh
     JobKind.Tree -> Place.Park
 }
+
+// MARK: - Talking and treats
+
+/** Treats you can serve a friend at your house (or share at theirs). */
+enum class Treat(val title: String, val sprite: String) { Cookie("Cookie", "cookie_sugar"), Tea("Tea", "teacup"), Cocoa("Cocoa", "cocoa_mug") }
+
+val treatThanks = listOf(
+    "Mmm, thank you! This is SO yummy! 😋", "Aww, you're the best host ever! 💖", "Ooh, my favourite! Thank you! ✨",
+    "*sip* Ahh, warm and cozy. Thank you! ☕", "You make the best treats in Christmas Town! 🎄",
+)
+val howAreYouAnswers = listOf(
+    "I'm super! Thanks for asking 😊", "A little sleepy, but SO happy to see you! 😴💖", "Great! I just had the yummiest cocoa ☕",
+    "Busy busy! But never too busy for you 💕", "Fantastic! It snowed on my nose this morning ❄️",
+)
+val friendAnswers = listOf("Aww, YOU'RE a great friend too! 🥰", "That made my whole day! 💖", "Best friends forever! 🤝✨", "*happy dance* 💃 Thank you!")

@@ -150,8 +150,8 @@ fun FriendHouseScreen(game: GameState) {
             if (npc.name in game.s.bestGifts) Tag("Best friends! 💖", Pal.pink, 13)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Btn("💬 Chat", Pal.blue, 16, Modifier.weight(1f)) { says = npc.lines[line % npc.lines.size]; line++; game.chat(npc); Audio.play(Sfx.Message) }
-            Btn("🍪 Give a cookie", hex(0xE0843A), 16, Modifier.weight(1f)) { game.giveCookie(npc) }
+            Btn("💬 Talk", Pal.blue, 16, Modifier.weight(1f)) { game.chatWith = npc.name; Audio.play(Sfx.Message) }
+            Btn("☕ Share a treat", hex(0xE0843A), 16, Modifier.weight(1f)) { game.chatWith = npc.name }
         }
         val coming = npc.name in game.s.homeGuests
         Btn(if (coming) "🏠 ${npc.name} is coming to your house! ✓" else "🏠 Come over to my house!", Pal.green, 16, Modifier.fillMaxWidth(), enabled = !coming) {

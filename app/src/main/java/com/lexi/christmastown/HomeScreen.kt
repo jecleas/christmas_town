@@ -302,11 +302,14 @@ private fun androidx.compose.foundation.layout.BoxScope.HomeGuest(game: GameStat
     val x = listOf(-140, 140, -150)[i % 3]
     Column(
         Modifier.align(Alignment.BottomCenter).padding(bottom = (if (i == 2) 150 else 34).dp).offset(x = x.dp)
-            .squish { said = npc.lines.random(); game.chat(npc); Audio.play(Sfx.Message) },
+            .squish { game.chatWith = npc.name; Audio.play(Sfx.Message) },
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         said?.let { Txt(it, 11, align = TextAlign.Center, modifier = Modifier.width(130.dp).panel(Color.White, radius = 6.dp).padding(3.dp)) }
-        Bob(3f, 700 + i * 150) { ElfPx(npc.look, if (i == 2) 84.dp else 100.dp) }
+        Box {
+            Bob(3f, 700 + i * 150) { ElfPx(npc.look, if (i == 2) 84.dp else 100.dp) }
+            game.holding[npc.name]?.let { Px(it.sprite, 26.dp, Modifier.align(Alignment.BottomEnd)) }
+        }
         Txt(npc.name, 11, Color.White, modifier = Modifier.background(Pal.ink.copy(alpha = 0.7f), RoundedCornerShape(5.dp)).padding(horizontal = 4.dp))
     }
 }

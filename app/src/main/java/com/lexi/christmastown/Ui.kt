@@ -210,6 +210,7 @@ fun GameApp(game: GameState) {
                             if (p == null) HubScreen(game) else Activity(game, if (p == Place.House) "${game.visiting}'s House" else p.title, onBack = { game.back() }) { PlaceScreen(game, p) }
                         }
                     }
+                    game.chatWith?.let { TalkSheet(game, it) }
                     ToastView(game)
                 }
                 if (game.overlay != Overlay.None || game.showJobs) {
