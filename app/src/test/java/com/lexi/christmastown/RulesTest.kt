@@ -59,6 +59,15 @@ class RulesTest {
         assertTrue(workmates.all { w -> npcs.any { it.name == w.name } && w.tips.isNotEmpty() })
     }
 
+    @Test fun birthdaysAndFavours() {
+        for (n in npcs) assertTrue(birthdayOf(n) in 1..28)
+        assertTrue((1..28).any { d -> npcs.any { isBirthday(it, d) } })
+        assertTrue(Want.entries.all { Favour("Jingle", it, 2).ask.isNotBlank() })
+        val old = json.decodeFromString<Save>("""{"name":"Lexi"}""")
+        assertTrue(old.favours.isEmpty() && old.letters.isEmpty() && old.photos.isEmpty())
+        assertTrue(photoProps.isNotEmpty() && photoBackdrops.isNotEmpty())
+    }
+
     @Test fun christmasEveAfterTenWorkdays() = assertEquals(10, CHRISTMAS_EVE_WORKDAYS)
 
     @Test fun eightLevelsReachedBeforeChristmasEve() {

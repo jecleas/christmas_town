@@ -45,6 +45,7 @@ fun houseImage(walls: Color, roof: Color): ImageBitmap =
 fun TownScreen(game: GameState) {
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Txt("Welcome to Christmas Town! ❄️ Tap a building to go inside.", 16, Color.White, align = TextAlign.Center)
+        FavourList(game)
 
         StreetSign("🏪 Main Street")
         Column(Modifier.fillMaxWidth().panel(hex(0xF4F8FF)).padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -109,6 +110,8 @@ private fun FriendHouseCard(game: GameState, npc: Npc) {
             Px(houseImage(hex(home.outside), roof), 74.dp, Modifier.align(Alignment.BottomCenter))
             Px(Sprites.elf(npc.look), 30.dp, Modifier.align(Alignment.BottomEnd))
             val tag = when {
+                game.birthdayToday(npc) -> "🎂"
+                game.favourFrom(npc.name) != null -> "🙏"
                 npc.name in game.s.homeGuests -> "🏠"
                 npc.name in game.s.visitedToday -> "✓"
                 else -> null

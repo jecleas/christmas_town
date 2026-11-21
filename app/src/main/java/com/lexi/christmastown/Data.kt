@@ -530,6 +530,12 @@ val stickers: List<Sticker> = buildList {
     add(Sticker("memory", "Matched all the party cards", "juice_punch"))
     add(Sticker("dance", "Had a dance party", "candy"))
     add(Sticker("friends10", "Made 10 friends in Christmas Town", "ginghouse"))
+    add(Sticker("favour", "Did a favour for a friend", "gift"))
+    add(Sticker("letter", "Wrote back to a letter", "mailbox"))
+    add(Sticker("birthday", "Wished a friend happy birthday", "cake"))
+    add(Sticker("skate", "Twirled 6 times on the ice", "snowman"))
+    add(Sticker("sled", "Won the sled race against Pip", "sled"))
+    add(Sticker("photo", "Took a photo with friends", "presents"))
 }
 
 /** Sticker milestones and their prizes. */
@@ -559,7 +565,8 @@ enum class Place(val title: String, val sprite: String, val side: Side, val colo
     Snacks("Snacks", "cocoa_mug", Side.Right, hex(0xC98B5E)),
     Pets("Pets", "pet_penguin", Side.Right, hex(0xF2A93B)),
     Town("Town", "house", Side.Hidden, hex(0x3D6FD6)),
-    House("House", "house", Side.Hidden, hex(0x9A5B34)),   // visiting a friend (GameState.visiting)
+    House("House", "house", Side.Hidden, hex(0x9A5B34)),
+    Mail("Mailbox", "mailbox", Side.Hidden, hex(0xE5394B)),   // visiting a friend (GameState.visiting)
     Party("Party", "balloon", Side.Right, hex(0xFF5FA2)),
     Advent("Advent Calendar", "gift", Side.Hidden, hex(0xA02338)),
     Stickers("Sticker Book", "teddy", Side.Hidden, hex(0x9B6BE0)),
@@ -824,3 +831,46 @@ val howAreYouAnswers = listOf(
     "Busy busy! But never too busy for you 💕", "Fantastic! It snowed on my nose this morning ❄️",
 )
 val friendAnswers = listOf("Aww, YOU'RE a great friend too! 🥰", "That made my whole day! 💖", "Best friends forever! 🤝✨", "*happy dance* 💃 Thank you!")
+
+// MARK: - Favours, letters, birthdays
+
+/** Things a friend might ask you to bring them. */
+@Serializable enum class Want(val one: String, val many: String, val sprite: String, val why: String) {
+    Cookie("cookie", "cookies", "cookie_sugar", "I'm having friends over and I ran out of cookies!"),
+    Toy("toy", "toys", "teddy", "My little cousin is visiting and has nothing to play with!"),
+    Carrot("carrot", "carrots", "carrot", "My bunny is SO hungry!"),
+    Wheat("wheat", "wheat", "wheat", "I want to bake bread, but I have no wheat!"),
+    Cocoa("hot cocoa", "hot cocoas", "cocoa_mug", "Brrr! I'm freezing!"),
+}
+
+/** A friend asked you for help. Bring them what they need for a reward. */
+@Serializable data class Favour(val from: String, val want: Want, val amount: Int, val done: Boolean = false) {
+    val ask get() = "${want.why} Can you bring me $amount ${if (amount == 1) want.one else want.many}? 🙏"
+}
+const val FAVOUR_REWARD = 300
+
+/** A letter in your mailbox. */
+@Serializable data class Letter(val from: String, val text: String, val day: Int, val read: Boolean = false, val replied: Boolean = false)
+
+val letterTemplates = listOf(
+    "Dear %me, thank you for being my friend! You're the BEST! 💖",
+    "Hi %me! Want to come over to my house today? I'll make cocoa! ☕",
+    "%me! I drew you a picture of a reindeer! 🦌 (It's a bit wobbly.)",
+    "Dear %me, everyone says you work SO hard. Santa is really proud! 🎅",
+    "Guess what, %me? It snowed on my nose this morning! ❄️ Hee hee!",
+    "Hi %me! Let's go to the Party Place and dance together! 💃",
+    "Dear %me, I made a snowman and named him after you! ⛄",
+)
+val letterReplies = listOf("Thank you! 💖", "See you soon! 👋", "You're the best! ✨")
+
+/** Every friend has a birthday on one day of each 28-day month. */
+fun birthdayOf(npc: Npc) = 1 + (npc.name.hashCode().let { if (it < 0) -it else it } % 28)
+fun isBirthday(npc: Npc, day: Int) = (day - 1) % 28 + 1 == birthdayOf(npc)
+
+// MARK: - Photo booth
+
+/** A photo from the Party Place photo booth: you plus friends, with silly props. */
+@Serializable data class Photo(val people: List<String>, val prop: Int, val bg: Int, val day: Int)
+val photoProps = listOf("🎩", "👑", "🕶️", "🎀", "🦌", "🎉")
+val photoBackdrops = listOf(0xFF8FB0L, 0x9BC8EEL, 0xFFE08AL, 0xB79CFFL, 0x9FE0B0L)
+const val MAX_PHOTOS = 12

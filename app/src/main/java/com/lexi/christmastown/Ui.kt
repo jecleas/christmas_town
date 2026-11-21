@@ -156,9 +156,10 @@ fun backgroundFor(p: Place?): Brush = when (p) {
     Place.Bank -> Brush.verticalGradient(listOf(hex(0xFFF1C9), hex(0xE9C77B)))
     Place.Town -> Brush.verticalGradient(listOf(hex(0x2C4F8C), hex(0x9BC8EE)))
     Place.House -> Brush.verticalGradient(listOf(hex(0x3A2A4A), hex(0x7A5A6A)))
+    Place.Mail -> Brush.verticalGradient(listOf(hex(0x7A1E2E), hex(0xD9A066)))
 }
 
-private val darkPlaces = setOf(null, Place.Decorate, Place.Snacks, Place.Phone, Place.Stable, Place.SantaList, Place.Sleigh, Place.Friends, Place.Closet, Place.Park, Place.Advent, Place.Stickers, Place.Party, Place.Town, Place.House)
+private val darkPlaces = setOf(null, Place.Decorate, Place.Snacks, Place.Phone, Place.Stable, Place.SantaList, Place.Sleigh, Place.Friends, Place.Closet, Place.Park, Place.Advent, Place.Stickers, Place.Party, Place.Town, Place.House, Place.Mail)
 fun textOn(p: Place?) = if (p in darkPlaces) Color.White else Pal.ink
 
 // MARK: - The whole app
@@ -193,6 +194,7 @@ fun GameApp(game: GameState) {
                 Place.Bank -> Music.JollyOldStNicholas
                 Place.Town -> Music.GoodKingWenceslas
                 Place.House -> Music.SilentNight
+                Place.Mail -> Music.JollyOldStNicholas
             }
         }
         LaunchedEffect(song) { Audio.music(song) }
@@ -246,6 +248,7 @@ private fun PlaceScreen(game: GameState, p: Place) = when (p) {
     Place.Bank -> BankScreen(game)
     Place.Town -> TownScreen(game)
     Place.House -> FriendHouseScreen(game)
+    Place.Mail -> MailScreen(game)
 }
 
 /** A full-screen activity: big Back button, title, money and energy, then the content. */

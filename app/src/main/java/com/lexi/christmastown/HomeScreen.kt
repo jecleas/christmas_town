@@ -203,6 +203,13 @@ fun RoomScene(game: GameState, floor: Int, hub: Boolean) {
         RoomBase(room.wall, room.stripe, s.placed.filter { it.floor == floor }, game.now)
 
         if (hub) {
+            // Your mailbox on the wall (Maple brings letters every morning)
+            Box(Modifier.align(Alignment.TopCenter).offset(x = 102.dp, y = 150.dp).squish { game.go(Place.Mail) }) {
+                Px("mailbox", 52.dp)
+                if (game.unreadLetters > 0) Txt("${game.unreadLetters}", 12, Color.White, modifier = Modifier.align(Alignment.TopEnd).offset(x = 6.dp, y = (-6).dp).background(Pal.red, RoundedCornerShape(8.dp)).padding(horizontal = 5.dp, vertical = 1.dp))
+            }
+            // Your newest photo-booth photo, framed under the window
+            s.photos.firstOrNull()?.let { Box(Modifier.align(Alignment.TopCenter).offset(y = 146.dp)) { PhotoView(game, it, 104.dp) } }
             // Friends you invited over stand behind you (tap them to chat)
             s.homeGuests.mapNotNull { n -> npcs.firstOrNull { it.name == n } }.forEachIndexed { i, npc -> HomeGuest(game, npc, i) }
             // Your elf, your main pet and a baby reindeer buddy
@@ -226,7 +233,8 @@ fun RoomScene(game: GameState, floor: Int, hub: Boolean) {
         if (hub) {
             // Table of today's goodies
             Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                val goodies = Cookie.entries.flatMap { c -> List(minOf(s.cookies.n(c), 3)) { c.sprite } } +
+                val party = s.homeGuests.any { n -> npcs.any { it.name == n && game.birthdayToday(it) } }
+                val goodies = (if (party) listOf("cake") else emptyList()) + Cookie.entries.flatMap { c -> List(minOf(s.cookies.n(c), 3)) { c.sprite } } +
                     Toy.entries.flatMap { t -> List(minOf(s.toys.n(t), 2)) { t.sprite } }
                 Row(Modifier.height(38.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                     if (goodies.isEmpty()) Txt("Bake cookies & make toys!", 13, Color.White, modifier = Modifier.background(Pal.ink.copy(alpha = 0.6f), RoundedCornerShape(5.dp)).padding(horizontal = 6.dp))

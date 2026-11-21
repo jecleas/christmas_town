@@ -55,7 +55,7 @@ import kotlin.random.Random
 private val partyPink = hex(0xFF5FA2)
 private val balloonColors = listOf(hex(0xE5394B), hex(0x3D6FD6), hex(0x3FAF5A), hex(0x9B6BE0), hex(0xFF8FB0), hex(0xFF9A3C))
 
-private enum class PartyTab(val title: String) { Juice("🧃 Juice"), Games("🎈 Games"), Friends("💬 Chat"), Movies("🎬 Movies"), Dance("💃 Dance") }
+private enum class PartyTab(val title: String) { Juice("🧃Juice"), Games("🎈Games"), Friends("💬Chat"), Movies("🎬Movie"), Dance("💃Dance"), Photo("📸Photo") }
 
 @Composable
 fun PartyScreen(game: GameState) {
@@ -66,13 +66,14 @@ fun PartyScreen(game: GameState) {
         LockedParty(game)
     } else {
         Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (!busy) Tabs(PartyTab.entries, tab, { it.title }, partyPink) { tab = it }
+            if (!busy) Tabs(PartyTab.entries, tab, { it.title }, partyPink, size = 12) { tab = it }
             when (tab) {
                 PartyTab.Juice -> JuiceBar(game)
                 PartyTab.Games -> PartyGames(game) { busy = it }
                 PartyTab.Friends -> PartyFriends(game)
                 PartyTab.Movies -> Cinema(game, { busy = it }) { fs -> brought.clear(); brought.addAll(fs); busy = false; tab = PartyTab.Dance }
                 PartyTab.Dance -> DanceFloor(game, brought)
+                PartyTab.Photo -> PhotoBooth(game)
             }
         }
     }

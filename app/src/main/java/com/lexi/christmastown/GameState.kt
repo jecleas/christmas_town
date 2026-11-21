@@ -108,6 +108,15 @@ sealed interface Overlay {
     val servedToday: Set<String> = emptySet(),
     val ateWith: Set<String> = emptySet(),
     val playedWith: Set<String> = emptySet(),
+    // Favours, mailbox, birthdays (refreshed each new day)
+    val dailyDay: Int = 0,
+    val favours: List<Favour> = emptyList(),
+    val letters: List<Letter> = emptyList(),
+    val birthdayWished: Set<String> = emptySet(),
+    // Snow Park games and the photo booth
+    val skateDay: Int = 0,
+    val sledDay: Int = 0,
+    val photos: List<Photo> = emptyList(),
 )
 
 /** Stickers you've earned just by what's in your save (things you own, pets, friends...). */
@@ -266,10 +275,11 @@ class GameState(private val prefs: SharedPreferences) {
             copy(
                 day = day + 1, energy = 100, paidToday = false, fed = emptySet(), brushed = emptySet(),
                 talkedToday = emptySet(), jobs = jobsFor(levelFor(workdays)), kids = makeKids(listOf(5, 5, 5, 5, 5, 5, 6, 6)[levelFor(workdays) - 1]), kidIndex = 0,
-                washed = emptySet(), juiceShared = emptySet(), paidPairs = 0, sleighBonusPaid = false, earnedToday = 0, bankSaved = bankSaved + interest, homeGuests = emptyList(), visitedToday = emptySet(), workedWith = emptySet(), helpedBy = emptySet(), servedToday = emptySet(), ateWith = emptySet(), playedWith = emptySet(),
+                washed = emptySet(), juiceShared = emptySet(), paidPairs = 0, sleighBonusPaid = false, earnedToday = 0, bankSaved = bankSaved + interest, homeGuests = emptyList(), visitedToday = emptySet(), workedWith = emptySet(), helpedBy = emptySet(), servedToday = emptySet(), ateWith = emptySet(), playedWith = emptySet(), birthdayWished = emptySet(),
             )
         }
         overlay = Overlay.Morning(s.day, worked, interest)
+        newDay()
         place = null
     }
 
@@ -607,6 +617,7 @@ class GameState(private val prefs: SharedPreferences) {
     fun saveElf(name: String, look: ElfLook) {
         update { copy(name = name.trim().ifEmpty { "Lexi" }.take(12), look = look, hasElf = true) }
         showCreator = false
+        newDay()
     }
 
     // MARK: House
@@ -817,6 +828,126 @@ class GameState(private val prefs: SharedPreferences) {
         return true
     }
 
+    // MARK: Favours, mail, birthdays
+
+    /** Each new day: two friends ask for favours, and Maple brings the mail. */
+    private fun newDay() {
+        if (s.dailyDay == s.day || !s.hasElf) return
+        val r = kotlin.random.Random(s.day * 7919)
+        val askers = npcs.shuffled(r).take(2)
+        val favours = askers.map { n -> Want.entries.random(r).let { w -> Favour(n.name, w, if (w == Want.Toy || w == Want.Cocoa) 1 else 2) } }
+        val writers = (npcs.filter { s.hearts.n(it.name) > 0 }.ifEmpty { npcs }).shuffled(r).take(if (s.day == 1) 1 else 2)
+        val mail = writers.map { Letter(it.name, letterTemplates.random(r).replace("%me", s.name), s.day) } +
+            npcs.filter { isBirthday(it, s.day) }.map { Letter("Maple", "Psst, ${s.name}! Today is ${it.name}'s BIRTHDAY! 🎂 Go and say happy birthday!", s.day) }
+        update { copy(dailyDay = day, favours = favours, letters = (mail + letters).take(20)) }
+    }
+
+    val unreadLetters get() = s.letters.count { !it.read }
+    fun favourFrom(name: String) = s.favours.firstOrNull { it.from == name && !it.done }
+    fun birthdayToday(npc: Npc) = isBirthday(npc, s.day)
+
+    /** How many of a wanted thing you have. */
+    fun have(w: Want) = when (w) {
+        Want.Cookie -> s.cookies.values.sum()
+        Want.Toy -> s.toys.values.sum()
+        Want.Carrot -> s.crops.n(Crop.Carrot)
+        Want.Wheat -> s.crops.n(Crop.Wheat)
+        Want.Cocoa -> s.food.n(Food.HotCocoa)
+    }
+
+    private fun <K> Map<K, Int>.takeAny(n: Int): Map<K, Int> {
+        var left = n
+        return mapValues { (_, v) -> val t = minOf(v, left); left -= t; v - t }
+    }
+
+    /** Give your friend what they asked for: $300 and +1 💖. */
+    fun doFavour(f: Favour): Boolean {
+        if (have(f.want) < f.amount) { say("You need ${f.amount} ${f.want.many} for ${f.from}! You have ${have(f.want)}."); Audio.play(Sfx.Oops); return false }
+        update {
+            val paid = when (f.want) {
+                Want.Cookie -> copy(cookies = cookies.takeAny(f.amount))
+                Want.Toy -> copy(toys = toys.takeAny(f.amount))
+                Want.Carrot -> copy(crops = crops.add(Crop.Carrot, -f.amount))
+                Want.Wheat -> copy(crops = crops.add(Crop.Wheat, -f.amount))
+                Want.Cocoa -> copy(food = food.add(Food.HotCocoa, -f.amount))
+            }
+            paid.copy(
+                favours = favours.map { if (it == f) it.copy(done = true) else it }, money = money + FAVOUR_REWARD,
+                hearts = hearts.add(f.from, 1).mapValues { it.value.coerceAtMost(5) },
+            )
+        }
+        sticker("favour")
+        say("${f.from} says THANK YOU! They gave you ${money(FAVOUR_REWARD)} 💰💖")
+        Audio.play(Sfx.Coins)
+        npcs.firstOrNull { it.name == f.from }?.let { checkBestFriend(it) }
+        return true
+    }
+
+    fun readLetters() { if (unreadLetters > 0) update { copy(letters = letters.map { it.copy(read = true) }) } }
+
+    /** Write back to a letter: +1 💖 to whoever sent it. */
+    fun reply(letter: Letter) {
+        update {
+            copy(
+                letters = letters.map { if (it == letter) it.copy(replied = true, read = true) else it },
+                hearts = if (npcs.any { it.name == letter.from }) hearts.add(letter.from, 1).mapValues { it.value.coerceAtMost(5) } else hearts,
+            )
+        }
+        sticker("letter")
+        say("Maple will deliver your letter to ${letter.from}! ✉️💖")
+        Audio.play(Sfx.Message)
+    }
+
+    /** Wish a friend happy birthday (+1 💖), or give them a toy as a present (+2 💖). */
+    fun happyBirthday(npc: Npc, withPresent: Boolean): String {
+        if (withPresent) {
+            if (s.toys.values.sum() == 0) { say("You need a toy to give! Make one in the Workshop 🧸"); Audio.play(Sfx.Oops); return "Aww, that's okay! Your hug is the best present! 🤗" }
+            update { copy(toys = toys.takeAny(1), hearts = hearts.add(npc.name, 2).mapValues { it.value.coerceAtMost(5) }, birthdayWished = birthdayWished + npc.name) }
+            Audio.play(Sfx.LevelUp)
+            sticker("birthday")
+            checkBestFriend(npc)
+            return "A PRESENT?! For ME?! 🎁 This is the best birthday EVER! Thank you! 🥳"
+        }
+        if (npc.name !in s.birthdayWished) {
+            update { copy(birthdayWished = birthdayWished + npc.name, hearts = hearts.add(npc.name, 1).mapValues { it.value.coerceAtMost(5) }) }
+            sticker("birthday")
+            checkBestFriend(npc)
+        }
+        Audio.play(Sfx.Ding)
+        return "Thank you!! 🎂 You remembered my birthday! 🥳"
+    }
+
+    // MARK: Snow Park games
+
+    fun skateDone(twirls: Int) {
+        if (twirls >= 6) sticker("skate")
+        val coach = npcs.first { it.name == "Snowflake" }
+        if (s.skateDay != s.day && twirls >= 4) {
+            update { copy(skateDay = day, hearts = hearts.add(coach.name, 1).mapValues { it.value.coerceAtMost(5) }) }
+            checkBestFriend(coach)
+            say("Snowflake loved skating with you! +1 💖")
+        } else say("$twirls twirls! ⛸️" + if (twirls < 4) " Try for 4 to impress Snowflake!" else "")
+    }
+
+    fun sledDone(won: Boolean) {
+        if (won) { sticker("sled"); Audio.play(Sfx.LevelUp) } else Audio.play(Sfx.Pop)
+        val pip = npcs.first { it.name == "Pip" }
+        if (s.sledDay != s.day) {
+            update { copy(sledDay = day, hearts = hearts.add(pip.name, 1).mapValues { it.value.coerceAtMost(5) }) }
+            checkBestFriend(pip)
+        }
+        say(if (won) "You WON the sled race! 🏆🛷" else "Pip won this time! Race again? 🛷")
+    }
+
+    // MARK: Photo booth
+
+    fun takePhoto(p: Photo) {
+        update { copy(photos = (listOf(p) + photos).take(MAX_PHOTOS)) }
+        sticker("photo")
+        Audio.play(Sfx.Pop)
+        say("Click! 📸 Your photo is on your living room wall!")
+    }
+
     // MARK: Talking & treats
 
     /** The friend you're having a chat with (a pop-up over any screen), or null. */
@@ -960,4 +1091,6 @@ class GameState(private val prefs: SharedPreferences) {
     fun chatFriendship(elf: String) {
         npcs.firstOrNull { it.name == elf }?.let { chat(it) }
     }
+
+    init { newDay() }
 }

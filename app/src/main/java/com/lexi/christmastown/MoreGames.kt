@@ -62,10 +62,10 @@ private val confetti = listOf(hex(0xE5394B), hex(0x3FAF5A), hex(0x3D6FD6), hex(0
 
 /** Little tabs at the top of a place that has more than one thing to do. */
 @Composable
-fun <T> Tabs(options: List<T>, selected: T, label: (T) -> String, color: Color = Pal.red, onPick: (T) -> Unit) {
+fun <T> Tabs(options: List<T>, selected: T, label: (T) -> String, color: Color = Pal.red, size: Int = 15, onPick: (T) -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         for (o in options) Txt(
-            label(o), 15, if (o == selected) Color.White else Pal.ink, align = TextAlign.Center,
+            label(o), size, if (o == selected) Color.White else Pal.ink, align = TextAlign.Center, maxLines = 1,
             modifier = Modifier.weight(1f).squish { onPick(o); Audio.play(Sfx.Tap) }.panel(if (o == selected) color else Color.White).padding(vertical = 7.dp),
         )
     }
@@ -407,17 +407,19 @@ private fun DrawScope.drawIcing(roof: Rect, frac: Float) {
 // MARK: - Snow Park: the Town Tree and a snowball fight
 // ======================================================================
 
-private enum class ParkGame(val title: String) { Tree("🎄 Town Tree"), Snowball("❄️ Snowball Fight") }
+private enum class ParkGame(val title: String) { Tree("🎄 Tree"), Snowball("❄️ Snowball"), Skate("⛸️ Skate"), Sled("🛷 Sled") }
 
 @Composable
 fun ParkScreen(game: GameState) {
     var tab by remember { mutableStateOf(if (game.s.jobs.any { it.kind == JobKind.Tree && !it.finished }) ParkGame.Tree else ParkGame.Snowball) }
     var playing by remember { mutableStateOf(false) }
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (!playing) Tabs(ParkGame.entries, tab, { it.title }, Pal.blue) { tab = it }
+        if (!playing) Tabs(ParkGame.entries, tab, { it.title }, Pal.blue, size = 14) { tab = it }
         when (tab) {
             ParkGame.Tree -> TreeGame(game) { playing = it }
             ParkGame.Snowball -> SnowballGame(game) { playing = it }
+            ParkGame.Skate -> SkateGame(game) { playing = it }
+            ParkGame.Sled -> SledGame(game) { playing = it }
         }
     }
 }

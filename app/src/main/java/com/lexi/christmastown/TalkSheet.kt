@@ -69,6 +69,22 @@ fun TalkSheet(game: GameState, name: String) {
             }
             Txt(says, 17, align = TextAlign.Center, modifier = Modifier.fillMaxWidth().panel(Color.White).padding(10.dp))
 
+            // It's their birthday!
+            if (game.birthdayToday(npc)) Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Btn(Pal.pink, Modifier.weight(1f), onClick = { says = game.happyBirthday(npc, withPresent = false) }) { Px("cake", 22.dp); Txt("Happy birthday!", 13, Color.White, maxLines = 1) }
+                Btn("🎁 Give a toy", Pal.purple, 13, Modifier.weight(1f), enabled = name !in game.s.birthdayWished || game.s.toys.values.sum() > 0) { says = game.happyBirthday(npc, withPresent = true) }
+            }
+            // They asked you for a favour
+            game.favourFrom(name)?.let { f ->
+                Column(Modifier.fillMaxWidth().panel(hex(0xFFF1B8)).padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Txt("🙏 \"${f.ask}\"", 14, align = TextAlign.Center)
+                    Btn(Pal.green, Modifier.fillMaxWidth(), onClick = { if (game.doFavour(f)) says = "You're a life saver! THANK YOU! 💖" }) {
+                        Px(f.want.sprite, 22.dp)
+                        Txt("Give ${f.amount} ${if (f.amount == 1) f.want.one else f.want.many} (you have ${game.have(f.want)}) · +${money(FAVOUR_REWARD)}", 13, Color.White, maxLines = 1)
+                    }
+                }
+            }
+
             Txt("What do you want to say?", 14, Pal.brown)
             for (row in thingsToSay.chunked(2)) Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 for (t in row) Btn(t.label, Pal.blue, 14, Modifier.weight(1f)) {

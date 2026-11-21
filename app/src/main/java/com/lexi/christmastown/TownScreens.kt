@@ -42,7 +42,8 @@ fun FriendsScreen(game: GameState) {
     var party by remember { mutableStateOf(false) }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Txt("The Town Square! Tap an elf to talk to them.", 18, Color.White)
+        Txt("Tap an elf to talk to them!", 18, Color.White)
+        FavourList(game)
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             for (npc in npcs) {
                 val sel = npc == talking
