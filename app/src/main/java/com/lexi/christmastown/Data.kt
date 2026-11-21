@@ -539,7 +539,7 @@ val stickerPrizes: List<Pair<Int, Surprise>> = listOf(
 
 // MARK: - Activities (the icons on the main screen)
 
-enum class Side { Left, Right, Town, Hidden }   // Town places are buildings on the Town map   // Hidden places open from the buttons at the bottom of the main screen
+enum class Side { Left, Right, Hidden }   // Hidden places open from the buttons at the bottom of the main screen   // Hidden places open from the buttons at the bottom of the main screen
 
 /** Each icon on the main screen. [sprite] is its pixel-art picture ("" = drawn specially). */
 enum class Place(val title: String, val sprite: String, val side: Side, val color: Color) {
@@ -549,18 +549,18 @@ enum class Place(val title: String, val sprite: String, val side: Side, val colo
     Workshop("Workshop", "teddy", Side.Left, hex(0xE5394B)),
     SantaList("Santa's List", "santa", Side.Left, hex(0xA02338)),
     Sleigh("Sleigh", "sleigh", Side.Left, hex(0x3D6FD6)),
-    Park("Snow Park", "snowman", Side.Town, hex(0x5BA4D9)),
-    Bank("Bank", "moneybag", Side.Town, hex(0xD9A21B)),
+    Park("Snow Park", "snowman", Side.Left, hex(0x5BA4D9)),
+    Bank("Bank", "moneybag", Side.Left, hex(0xD9A21B)),
     Decorate("Decorate", "tree", Side.Right, hex(0x2E7D4A)),
-    Shop("Shop", "presents", Side.Town, hex(0x9B6BE0)),
+    Shop("Shop", "presents", Side.Right, hex(0x9B6BE0)),
     Closet("Closet", "", Side.Right, hex(0xFF8FB0)),
-    Friends("Town Square", "", Side.Town, hex(0x2EB5A5)),
+    Friends("Friends", "", Side.Right, hex(0x2EB5A5)),
     Phone("Phone", "phone", Side.Right, hex(0x3D6FD6)),
     Snacks("Snacks", "cocoa_mug", Side.Right, hex(0xC98B5E)),
     Pets("Pets", "pet_penguin", Side.Right, hex(0xF2A93B)),
-    Town("Town", "house", Side.Right, hex(0x3D6FD6)),
+    Town("Town", "house", Side.Hidden, hex(0x3D6FD6)),
     House("House", "house", Side.Hidden, hex(0x9A5B34)),   // visiting a friend (GameState.visiting)
-    Party("Party Place", "balloon", Side.Town, hex(0xFF5FA2)),
+    Party("Party", "balloon", Side.Right, hex(0xFF5FA2)),
     Advent("Advent Calendar", "gift", Side.Hidden, hex(0xA02338)),
     Stickers("Sticker Book", "teddy", Side.Hidden, hex(0x9B6BE0)),
 }

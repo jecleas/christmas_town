@@ -92,14 +92,15 @@ fun HubScreen(game: GameState) {
         }
 
         // Big buttons: jobs, advent calendar, sticker book, sleep
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Btn(
                 if (s.paidToday) "📋 Jobs ✅" else "📋 Jobs ${game.jobsDone}/${s.jobs.size}",
-                if (s.paidToday) Pal.green else Pal.red, 16, Modifier.weight(1f),
+                if (s.paidToday) Pal.green else Pal.red, 14, Modifier.weight(1f),
             ) { game.showJobs = true }
             CornerButton("📅", Pal.darkRed, if (game.adventDay > 0 && !game.adventOpenedThisYear.containsAll((1..game.adventDay).toList())) "!" else null) { game.go(Place.Advent) }
             CornerButton("📒", Pal.purple, game.newStickers.takeIf { it > 0 }?.toString()) { game.go(Place.Stickers) }
-            Btn("💤 Sleep", Pal.night, 16, Modifier.weight(1f)) { if (s.paidToday) game.sleep() else confirmSleep = true }
+            CornerButton("🏘️", Pal.blue, badge(game, Place.Town)) { game.go(Place.Town) }
+            Btn("💤 Sleep", Pal.night, 14, Modifier.weight(1f)) { if (s.paidToday) game.sleep() else confirmSleep = true }
         }
     }
 
@@ -120,7 +121,7 @@ fun HubScreen(game: GameState) {
 @Composable
 private fun CornerButton(icon: String, color: Color, badge: String?, onClick: () -> Unit) {
     Box {
-        Btn(icon, color, 20, Modifier.width(58.dp), onClick = onClick)
+        Btn(icon, color, 18, Modifier.width(50.dp), onClick = onClick)
         if (badge != null) Txt(badge, 12, Color.White, modifier = Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-6).dp).background(Pal.red, RoundedCornerShape(8.dp)).padding(horizontal = 5.dp, vertical = 1.dp))
     }
 }
@@ -150,7 +151,7 @@ fun badge(game: GameState, p: Place): String? {
         Place.Pets -> if (s.pets.any { it.fullness(game.now) < 0.4f || it.cleanness(game.now) < 0.4f }) "!" else null
         Place.Decorate -> if (Item.entries.any { game.available(it) > 0 }) "New" else null
         Place.Friends -> if (npcs.any { it.name !in s.talkedToday }) "!" else null
-        Place.Town -> if (badge(game, Place.Park) == "!") "!" else null
+        Place.Town -> if (s.homeGuests.isEmpty() && npcs.none { it.name in s.visitedToday }) "!" else null
         Place.Party -> if (!game.partyOpen) "🔒" else if (game.partyGuests.any { it.name !in s.talkedToday }) "!" else null
         Place.Phone -> (listOf(GROUP) + game.met).sumOf { game.unread(it) }.takeIf { it > 0 }?.toString() ?: if (game.groupHasNews) "!" else null
         else -> null
@@ -298,16 +299,16 @@ fun RoomBase(wall: Long, stripe: Long, placed: List<Placed>, now: Long) {
 private fun androidx.compose.foundation.layout.BoxScope.HomeGuest(game: GameState, npc: Npc, i: Int) {
     var said by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(said) { if (said != null) { kotlinx.coroutines.delay(2500); said = null } }
-    // bottom corners of the room (the icons are higher up), a third friend by the table
-    val x = listOf(-140, 140, -150)[i % 3]
+    // friends stand around the table of goodies, in front of you
+    val x = listOf(-78, 78, 0)[i % 3]
     Column(
-        Modifier.align(Alignment.BottomCenter).padding(bottom = (if (i == 2) 150 else 34).dp).offset(x = x.dp)
+        Modifier.align(Alignment.BottomCenter).padding(bottom = 46.dp).offset(x = x.dp)
             .squish { game.chatWith = npc.name; Audio.play(Sfx.Message) },
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         said?.let { Txt(it, 11, align = TextAlign.Center, modifier = Modifier.width(130.dp).panel(Color.White, radius = 6.dp).padding(3.dp)) }
         Box {
-            Bob(3f, 700 + i * 150) { ElfPx(npc.look, if (i == 2) 84.dp else 100.dp) }
+            Bob(3f, 700 + i * 150) { ElfPx(npc.look, 92.dp) }
             game.holding[npc.name]?.let { Px(it.sprite, 26.dp, Modifier.align(Alignment.BottomEnd)) }
         }
         Txt(npc.name, 11, Color.White, modifier = Modifier.background(Pal.ink.copy(alpha = 0.7f), RoundedCornerShape(5.dp)).padding(horizontal = 4.dp))

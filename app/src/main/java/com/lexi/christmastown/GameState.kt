@@ -106,6 +106,8 @@ sealed interface Overlay {
     val workedWith: Set<String> = emptySet(),
     val helpedBy: Set<String> = emptySet(),
     val servedToday: Set<String> = emptySet(),
+    val ateWith: Set<String> = emptySet(),
+    val playedWith: Set<String> = emptySet(),
 )
 
 /** Stickers you've earned just by what's in your save (things you own, pets, friends...). */
@@ -264,7 +266,7 @@ class GameState(private val prefs: SharedPreferences) {
             copy(
                 day = day + 1, energy = 100, paidToday = false, fed = emptySet(), brushed = emptySet(),
                 talkedToday = emptySet(), jobs = jobsFor(levelFor(workdays)), kids = makeKids(listOf(5, 5, 5, 5, 5, 5, 6, 6)[levelFor(workdays) - 1]), kidIndex = 0,
-                washed = emptySet(), juiceShared = emptySet(), paidPairs = 0, sleighBonusPaid = false, earnedToday = 0, bankSaved = bankSaved + interest, homeGuests = emptyList(), visitedToday = emptySet(), workedWith = emptySet(), helpedBy = emptySet(), servedToday = emptySet(),
+                washed = emptySet(), juiceShared = emptySet(), paidPairs = 0, sleighBonusPaid = false, earnedToday = 0, bankSaved = bankSaved + interest, homeGuests = emptyList(), visitedToday = emptySet(), workedWith = emptySet(), helpedBy = emptySet(), servedToday = emptySet(), ateWith = emptySet(), playedWith = emptySet(),
             )
         }
         overlay = Overlay.Morning(s.day, worked, interest)
@@ -774,10 +776,14 @@ class GameState(private val prefs: SharedPreferences) {
         else say("You popped $popped balloons! 🎈")
     }
 
-    fun go(p: Place?) { place = p }
+    fun go(p: Place?) { place = p; fromTown = false }
+
+    /** You walked into a building from the Town map, so Back goes back to the town. */
+    private var fromTown = false
+    fun goFromTown(p: Place) { place = p; fromTown = true }
 
     /** The Back button: places in town go back to the Town map, everything else to your house. */
-    fun back() { place = if (place?.side == Side.Town || place == Place.House) Place.Town else null }
+    fun back() { val toTown = fromTown || place == Place.House; place = if (toTown && place != Place.Town) Place.Town else null; fromTown = false }
 
     // MARK: Workmates
 
@@ -847,7 +853,7 @@ class GameState(private val prefs: SharedPreferences) {
     /** Whose house you're visiting right now (not saved). */
     var visiting by mutableStateOf<String?>(null)
 
-    fun visit(npc: Npc) { visiting = npc.name; place = Place.House }
+    fun visit(npc: Npc) { visiting = npc.name; place = Place.House; fromTown = true }
 
     /** Knock knock! The first visit each day, your friend makes you hot cocoa. */
     fun arriveAt(npc: Npc): String {
@@ -856,6 +862,26 @@ class GameState(private val prefs: SharedPreferences) {
         update { copy(visitedToday = visitedToday + npc.name, energy = (energy + 10).coerceAtMost(100)) }
         Audio.play(Sfx.Ding)
         return "Welcome to my house, ${s.name}! Have some hot cocoa ☕ (+10 ⚡)"
+    }
+
+    /** Your friend cooks for you! Yummy food and energy, once a day at each friend's house. */
+    fun eatAt(npc: Npc): String {
+        if (npc.name in s.ateWith) return "We already ate today! I'm SO full 😄 Come back tomorrow!"
+        val dish = listOf("warm cookies 🍪", "a big mug of hot cocoa ☕", "apple pie 🥧", "gingerbread 🍪", "pancakes with syrup 🥞", "vegetable soup 🥕").random()
+        update { copy(ateWith = ateWith + npc.name, energy = (energy + 15).coerceAtMost(100)) }
+        Audio.play(Sfx.Munch)
+        say("Yum! +15 ⚡")
+        return "I made $dish for us! Let's eat! 😋"
+    }
+
+    /** You found your friend in hide & seek! +1 💖 the first game each day. */
+    fun foundInHideAndSeek(npc: Npc, tries: Int): String {
+        Audio.play(Sfx.Ding)
+        if (npc.name !in s.playedWith) {
+            update { copy(playedWith = playedWith + npc.name, hearts = hearts.add(npc.name, 1).mapValues { it.value.coerceAtMost(5) }) }
+            checkBestFriend(npc)
+        }
+        return if (tries == 1) "WHAT?! You found me first try! 😲 You're SO good at this!" else "Boo! 😆 You found me in $tries tries! Play again?"
     }
 
     /** Invite a friend to come over to your house for the rest of the day. */

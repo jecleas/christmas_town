@@ -47,7 +47,8 @@ class RulesTest {
     }
 
     @Test fun townPlacesAreInTown() {
-        for (p in listOf(Place.Shop, Place.Bank, Place.Party, Place.Park, Place.Friends)) assertEquals(Side.Town, p.side)
+        // Lexi wanted every place back on the main screen (the Town map is extra)
+        for (p in listOf(Place.Shop, Place.Bank, Place.Party, Place.Park, Place.Friends)) assertTrue(p.side != Side.Hidden)
         val old = json.decodeFromString<Save>("""{"name":"Lexi"}""")
         assertTrue(old.homeGuests.isEmpty())
     }

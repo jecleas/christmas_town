@@ -63,7 +63,7 @@ fun TownScreen(game: GameState) {
                         place == Place.Party || place == Place.Friends -> null
                         else -> badge(game, place)
                     }
-                    Building(place.title, houseImage(walls, roof), place.sprite.ifEmpty { "cocoa_mug" }, npcNamed(keeper).look, badge) { game.go(place) }
+                    Building(place.title, houseImage(walls, roof), place.sprite.ifEmpty { "cocoa_mug" }, npcNamed(keeper).look, badge) { game.goFromTown(place) }
                 }
             }
         }
@@ -130,8 +130,10 @@ fun FriendHouseScreen(game: GameState) {
     if (npc == null) { Txt("Nobody's home! 🏠", 20, Color.White); return }
     val home = remember(npc) { homeOf(npc) }
     var says by remember(npc) { mutableStateOf(npc.hello.ifEmpty { npc.lines.first() }) }
-    var line by remember(npc) { mutableIntStateOf(0) }
+    var hidingAt by remember(npc) { mutableStateOf<Int?>(null) }   // hide & seek: which piece of furniture they're behind
+    var tries by remember(npc) { mutableIntStateOf(0) }
     LaunchedEffect(npc) { says = game.arriveAt(npc) }
+    val spots = home.placed.filter { it.item.spot == Spot.Floor }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Box(Modifier.size(406.dp, 340.dp).clip(RoundedCornerShape(12.dp)).border(3.dp, Pal.ink, RoundedCornerShape(12.dp))) {
@@ -139,8 +141,19 @@ fun FriendHouseScreen(game: GameState) {
             // your friend, their pet, and you visiting
             Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 30.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 ElfPx(game.s.look, 120.dp)
-                Bob(4f, 800) { ElfPx(npc.look, 150.dp) }
+                if (hidingAt == null) Bob(4f, 800) { ElfPx(npc.look, 150.dp) }
                 home.pet?.let { Bob(3f, 500) { Px(it.sprite, 48.dp) } }
+            }
+            // hide & seek: tap the furniture to look behind it
+            if (hidingAt != null) for ((i, p) in spots.withIndex()) {
+                val img = Sprites.named(p.item.sprite)
+                val cx = 14 + p.x * (406 - 28)
+                val top = 340 * 0.66f - img.height * 3.2f + 6
+                Txt("❓", 26, modifier = Modifier.offset((cx - 16).dp, (top - 30).dp).squish {
+                    tries++
+                    if (i == hidingAt) { hidingAt = null; says = game.foundInHideAndSeek(npc, tries) }
+                    else { says = listOf("Not behind the ${p.item.title}! 🙈", "Nope! Keep looking! 👀", "*giggle* Not there!").random(); Audio.play(Sfx.Oops) }
+                })
             }
             Txt(says, 14, align = TextAlign.Center, modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp).width(300.dp).panel(Color.White).padding(8.dp))
         }
@@ -153,11 +166,20 @@ fun FriendHouseScreen(game: GameState) {
             Btn("💬 Talk", Pal.blue, 16, Modifier.weight(1f)) { game.chatWith = npc.name; Audio.play(Sfx.Message) }
             Btn("☕ Share a treat", hex(0xE0843A), 16, Modifier.weight(1f)) { game.chatWith = npc.name }
         }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Btn("🍽️ Eat together", hex(0xC98B5E), 16, Modifier.weight(1f)) { says = game.eatAt(npc) }
+            Btn("🙈 Hide & seek", Pal.purple, 16, Modifier.weight(1f), enabled = hidingAt == null && spots.isNotEmpty()) {
+                hidingAt = spots.indices.random(); tries = 0
+                says = "Close your eyes and count to 10! ...Ready or not, find me! 🙈"
+                Audio.play(Sfx.Pop)
+            }
+        }
         val coming = npc.name in game.s.homeGuests
         Btn(if (coming) "🏠 ${npc.name} is coming to your house! ✓" else "🏠 Come over to my house!", Pal.green, 16, Modifier.fillMaxWidth(), enabled = !coming) {
             game.invite(npc); if (npc.name in game.s.homeGuests) says = "Yay! I'll come over right now! 🏃💨"
         }
         Btn("👋 Bye! Back to town", Pal.red, 16, Modifier.fillMaxWidth()) { game.back() }
+        if (hidingAt != null) Txt("Tap the ❓ to look behind the furniture!", 14, Color.White)
     }
 }
 
