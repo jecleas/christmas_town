@@ -92,8 +92,8 @@ fun BankScreen(game: GameState) {
                         says = if (s.bankSaved > 0) "Of course! You have ${money(s.bankSaved)} saved. How much would you like?" else "Hmm, let me check my big book... you haven't saved anything yet! Put some money in first."
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Btn("👋 Hello!", Pal.blue, 15, Modifier.weight(1f)) { says = bankerHellos.random(); Audio.play(Sfx.Message) }
-                        Btn("💬 Chat", Pal.purple, 15, Modifier.weight(1f)) { says = bankerChats[chat % bankerChats.size]; chat++; Audio.play(Sfx.Message) }
+                        Btn("👋 Hello!", Pal.blue, 15, Modifier.weight(1f)) { says = bankerHellos.random(); game.chatFriendship(BANKER); Audio.play(Sfx.Message) }
+                        Btn("💬 Chat", Pal.purple, 15, Modifier.weight(1f)) { says = bankerChats[chat % bankerChats.size]; chat++; game.chatFriendship(BANKER); Audio.play(Sfx.Message) }
                         Btn("📈 Tonight?", Pal.red, 15, Modifier.weight(1f)) {
                             val i = bankInterest(s.bankSaved)
                             says = if (i > 0) "Tonight while you sleep, I'll add ${money(i)} to your savings. Money that grows. Isn't that magic? ✨"

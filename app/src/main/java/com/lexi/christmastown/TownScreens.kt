@@ -42,7 +42,7 @@ fun FriendsScreen(game: GameState) {
     var party by remember { mutableStateOf(false) }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Txt("Tap an elf to talk to them!", 18, Color.White)
+        Txt("The Town Square! Tap an elf to talk to them.", 18, Color.White)
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             for (npc in npcs) {
                 val sel = npc == talking
@@ -99,6 +99,7 @@ fun ShopScreen(game: GameState) {
     var tab by remember { mutableStateOf(ShopTab.Clothes) }
     val s = game.s
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        ShopKeeper(game, "Tinsel")
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             for (t in ShopTab.entries) Txt(
                 t.title, 15, if (tab == t) Color.White else Pal.ink,

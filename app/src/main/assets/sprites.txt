@@ -1562,3 +1562,25 @@ kaaaaaak
 kaaaaaak
 .kaaaak.
 ..kkkk..
+
+# ---------- Town (O walls, Q wall shadow, T roof: recolored per house) ----------
+
+@house
+.........kk.........
+........kTTk...kk...
+.......kTTTTk.kyyk..
+......kTTTTTTkkyyk..
+.....kTTTTTTTTkyyk..
+....kTTTTTTTTTTkkk..
+...kTTTTTTTTTTTTk...
+..kTTTTTTTTTTTTTTk..
+.kwwwwwwwwwwwwwwwwk.
+.kkkkkkkkkkkkkkkkkk.
+..kOOOOOOOOOOOOOOk..
+..kOkkkkOOOOkkkkOk..
+..kOkaakOOOOkaakOk..
+..kOkaakOkkOkaakOk..
+..kOkkkkkbbkkkkkOk..
+..kOOOOOkbbkOOOOOk..
+..kQQQQQkbakQQQQQk..
+..kkkkkkkkkkkkkkkk..

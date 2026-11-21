@@ -27,6 +27,31 @@ class RulesTest {
         assertEquals(0, old.paidPairs)
     }
 
+    @Test fun lotsOfFriendsEachWithTheirOwnHouse() {
+        assertTrue(npcs.size >= 16)
+        assertEquals(npcs.size, npcs.map { it.name }.toSet().size)
+        for (n in npcs) {
+            assertTrue(n.lines.isNotEmpty())
+            assertEquals(homeOf(n).placed.size, homeOf(n).placed.size)   // same house every time
+            assertTrue(homeOf(n).placed.isNotEmpty())
+        }
+        assertTrue(npcs.any { it.name == BANKER })
+    }
+
+    @Test fun moviesCostThreeToSixDollars() {
+        assertTrue(movies.size >= 7)
+        assertTrue(movies.all { it.price in 3..6 && it.scenes.isNotEmpty() })
+        // every elf in a movie is a real friend
+        val cast = movies.flatMap { m -> m.scenes.flatMap { it.actors } }.map { it.sprite }.filter { it.startsWith("@") && it != "@me" }
+        assertTrue(cast.all { name -> npcs.any { it.name == name.drop(1) } })
+    }
+
+    @Test fun townPlacesAreInTown() {
+        for (p in listOf(Place.Shop, Place.Bank, Place.Party, Place.Park, Place.Friends)) assertEquals(Side.Town, p.side)
+        val old = json.decodeFromString<Save>("""{"name":"Lexi"}""")
+        assertTrue(old.homeGuests.isEmpty())
+    }
+
     @Test fun christmasEveAfterTenWorkdays() = assertEquals(10, CHRISTMAS_EVE_WORKDAYS)
 
     @Test fun eightLevelsReachedBeforeChristmasEve() {

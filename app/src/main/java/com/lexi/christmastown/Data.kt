@@ -273,7 +273,14 @@ fun makeKids(n: Int): List<Kid> {
 
 // MARK: - Elf friends in town
 
-class Npc(val name: String, val look: ElfLook, val job: String, val lines: List<String>, val bestFriendGift: Item)
+class Npc(
+    val name: String, val look: ElfLook, val job: String, val lines: List<String>, val bestFriendGift: Item,
+    /** How they say who they are, their favourite thing, and how they say hello (for the phone chat). */
+    val about: String = job, val favorite: String = "", val hello: String = "",
+)
+
+/** Mr. Silverbell, the old elf who runs the Christmas Town Bank. */
+val bankerLook = ElfLook(girl = false, skin = 1, hairStyle = HairStyle.Short, hairColor = 6, eye = 0, outfit = Outfit.Sweater, outfitColor = 2, hat = Hat.TopHat, hatColor = 2)
 
 val npcs = listOf(
     Npc(
@@ -338,6 +345,117 @@ val npcs = listOf(
             "The Town Tree needs ornaments, tinsel AND a star. Don't forget the star!",
         ),
         Item.Sled,
+    ),
+    // ---- More of Christmas Town ----
+    Npc(
+        "Tinsel", ElfLook(girl = true, skin = 0, hairStyle = HairStyle.Bun, hairColor = 4, eye = 1, outfit = Outfit.Dress, outfitColor = 6, hat = Hat.None), "Shopkeeper",
+        listOf(
+            "Welcome to my shop! I've got clothes, hats, furniture and food!",
+            "The Crown is my fanciest hat. It sparkles SO much! 👑",
+            "New seeds come in every morning. Fresh from the snowy fields!",
+            "I love when elves try on outfits. Twirl for me! 💃",
+            "Saving up for something big? Mr. Silverbell's bank adds a little every night!",
+        ),
+        Item.Poinsettia, about = "I run the Shop on Main Street 🛍️", favorite = "Pretty hats! I have a hat for every day of the week 🎩", hello = "Welcome, welcome! 🛍️ Looking for anything special today?",
+    ),
+    Npc(
+        "Mr. Silverbell", bankerLook, "Banker",
+        listOf(
+            "I've worked at the bank for 300 years! Elves live a very long time, you know.",
+            "Money in the bank is safe, even from the cheekiest penguin! 🐧",
+            "When I was a young elf, a candy cane cost just one penny!",
+            "Saving up is clever. Then you can buy something really BIG later.",
+            "Shh! Santa keeps his money in my bank too. 🤫",
+        ),
+        Item.Clock, about = "I look after everyone's savings at the Bank 🏦", favorite = "A good cup of tea and a tidy ledger ☕📒", hello = "Good day, young elf! 🎩 How are your savings?",
+    ),
+    Npc(
+        "Maple", ElfLook(girl = true, skin = 2, hairStyle = HairStyle.Long, hairColor = 3, eye = 2, outfit = Outfit.Sweater, outfitColor = 1, hat = Hat.Beanie, hatColor = 0), "Mail Elf",
+        listOf(
+            "I carry ALL the letters kids send to Santa. My bag is SO heavy! ✉️",
+            "One kid asked Santa for a pet dinosaur! 🦕",
+            "I read the addresses really carefully so no letter gets lost.",
+            "Snow or storm, the mail always gets through!",
+            "Want to know a secret? Lots of kids draw pictures of the reindeer for Santa.",
+        ),
+        Item.Picture, about = "I'm the Mail Elf. I bring kids' letters to Santa ✉️", favorite = "Letters with drawings in them! 🖍️", hello = "Special delivery! 📬 It's a big hello for you!",
+    ),
+    Npc(
+        "Nutmeg", ElfLook(girl = false, skin = 1, hairStyle = HairStyle.Short, hairColor = 0, eye = 2, outfit = Outfit.Overalls, outfitColor = 0, hat = Hat.Elf, hatColor = 5), "Gardener",
+        listOf(
+            "Water your plants and they grow big and strong! 💧",
+            "Carrots are the reindeer's favourite. Grow lots!",
+            "I talk to my plants. They're very good listeners. 🌱",
+            "Did you know peppermint smells like candy canes?",
+            "The Greenhouse is warm even when it snows outside!",
+        ),
+        Item.Candles, about = "I'm a gardener. I grow the yummiest veggies 🥕", favorite = "Watching the first little sprout pop up 🌱", hello = "Howdy! 🌻 I've got mud on my boots but a smile on my face!",
+    ),
+    Npc(
+        "Buttons", ElfLook(girl = true, skin = 3, hairStyle = HairStyle.Bob, hairColor = 1, eye = 3, outfit = Outfit.Sweater, outfitColor = 3, hat = Hat.Earmuffs, hatColor = 4), "Tailor",
+        listOf(
+            "I sew all the elf outfits! Even Santa's big red coat. 🧵",
+            "Pockets! Every outfit needs pockets!",
+            "Do you like stripes or spots? I like BOTH.",
+            "I once sewed a sweater for a penguin. It was very tiny.",
+            "Your outfit looks super cute today!",
+        ),
+        Item.Rug, about = "I'm the tailor. I sew outfits for every elf 🧵", favorite = "Buttons, of course! I collect them 🔘", hello = "Ooh, hello! 🧵 Love your outfit today!",
+    ),
+    Npc(
+        "Gingersnap", ElfLook(girl = false, skin = 0, hairStyle = HairStyle.Short, hairColor = 2, eye = 0, outfit = Outfit.Tunic, outfitColor = 5, hat = Hat.Santa), "Cocoa Cart",
+        listOf(
+            "Hot cocoa! Get your hot cocoa! ☕",
+            "The secret is LOTS of marshmallows.",
+            "I sell cocoa in the Town Square every day.",
+            "Peppermint cocoa is my special recipe! 🍬",
+            "Pepper is my cookie hero. Her cookies and my cocoa are a perfect match!",
+        ),
+        Item.GingerbreadHouse, about = "I run the hot cocoa cart in the Town Square ☕", favorite = "Marshmallows. Big fluffy ones 😋", hello = "Hiya! ☕ Want a marshmallow? I always have spares!",
+    ),
+    Npc(
+        "Snowflake", ElfLook(girl = true, skin = 1, hairStyle = HairStyle.Pigtails, hairColor = 6, eye = 1, outfit = Outfit.Dress, outfitColor = 2, hat = Hat.Earmuffs, hatColor = 7), "Ice Skater",
+        listOf(
+            "I can spin on one skate! Wheeee! ⛸️",
+            "The frozen pond in the park is perfect for skating.",
+            "Falling down is part of learning. Just get back up!",
+            "Every snowflake is different. Just like every elf! ❄️",
+            "I'm practising a twirl for the Christmas show!",
+        ),
+        Item.Snowman, about = "I'm an ice skater! ⛸️ I twirl on the frozen pond", favorite = "Twirling so fast the world goes swirly 🌀", hello = "Hi hi! ⛸️ *twirls* Did you see that?!",
+    ),
+    Npc(
+        "Bramble", ElfLook(girl = false, skin = 2, hairStyle = HairStyle.Short, hairColor = 1, eye = 0, outfit = Outfit.Overalls, outfitColor = 1, hat = Hat.Beanie, hatColor = 6), "Woodcarver",
+        listOf(
+            "I carve wooden toys. Rocking horses are my favourite! 🐴",
+            "Measure twice, cut once. That's the woodcarver's rule.",
+            "Smell that? Fresh pine wood! 🌲",
+            "I made the chairs in the cinema. Comfy, right?",
+            "Every toy starts as a little block of wood.",
+        ),
+        Item.RockingChair, about = "I'm a woodcarver. I make wooden toys and furniture 🪵", favorite = "The smell of fresh pine wood 🌲", hello = "Well hello there! 🪵 Mind the wood shavings!",
+    ),
+    Npc(
+        "Poppy", ElfLook(girl = true, skin = 2, hairStyle = HairStyle.Long, hairColor = 5, eye = 3, outfit = Outfit.Dress, outfitColor = 1, hat = Hat.Elf, hatColor = 0), "Musician",
+        listOf(
+            "La la la! I play the jingle bells in the town band. 🎶",
+            "Music makes everything more Christmassy!",
+            "Can you hum Jingle Bells? I bet you can!",
+            "I'm writing a brand new song about reindeer. 🦌🎵",
+            "Clap along with me! Clap, clap, clap!",
+        ),
+        Item.Garland, about = "I'm a musician! 🎶 I play the jingle bells", favorite = "Singing carols in the snow 🎤", hello = "🎵 Hel-lo-o! 🎵 That's how I say hi!",
+    ),
+    Npc(
+        "Pip", ElfLook(girl = false, skin = 3, hairStyle = HairStyle.Bob, hairColor = 4, eye = 2, outfit = Outfit.Snowsuit, outfitColor = 2, hat = Hat.Beanie, hatColor = 1), "Little Elf",
+        listOf(
+            "I'm the littlest elf in town! But I'm SUPER fast. 💨",
+            "Sledding is the BEST. Wheeee! 🛷",
+            "When I grow up I want to drive Santa's sleigh!",
+            "Do you want to race? Ready, set, GO!",
+            "I lost a tooth today! 🦷",
+        ),
+        Item.Sled, about = "I'm Pip, the littlest elf! I go to elf school 🎒", favorite = "Sledding down the BIGGEST hill 🛷", hello = "HI!!! 👋 Wanna play?!",
     ),
 )
 
@@ -410,6 +528,8 @@ val stickers: List<Sticker> = buildList {
     add(Sticker("movie", "Watched a movie at the Party Place", "popcorn"))
     add(Sticker("balloons", "Popped 25 balloons in one game", "balloon"))
     add(Sticker("memory", "Matched all the party cards", "juice_punch"))
+    add(Sticker("dance", "Had a dance party", "candy"))
+    add(Sticker("friends10", "Made 10 friends in Christmas Town", "ginghouse"))
 }
 
 /** Sticker milestones and their prizes. */
@@ -419,7 +539,7 @@ val stickerPrizes: List<Pair<Int, Surprise>> = listOf(
 
 // MARK: - Activities (the icons on the main screen)
 
-enum class Side { Left, Right, Hidden }   // Hidden places open from the buttons at the bottom of the main screen
+enum class Side { Left, Right, Town, Hidden }   // Town places are buildings on the Town map   // Hidden places open from the buttons at the bottom of the main screen
 
 /** Each icon on the main screen. [sprite] is its pixel-art picture ("" = drawn specially). */
 enum class Place(val title: String, val sprite: String, val side: Side, val color: Color) {
@@ -429,16 +549,18 @@ enum class Place(val title: String, val sprite: String, val side: Side, val colo
     Workshop("Workshop", "teddy", Side.Left, hex(0xE5394B)),
     SantaList("Santa's List", "santa", Side.Left, hex(0xA02338)),
     Sleigh("Sleigh", "sleigh", Side.Left, hex(0x3D6FD6)),
-    Park("Snow Park", "snowman", Side.Left, hex(0x5BA4D9)),
-    Bank("Bank", "moneybag", Side.Left, hex(0xD9A21B)),
+    Park("Snow Park", "snowman", Side.Town, hex(0x5BA4D9)),
+    Bank("Bank", "moneybag", Side.Town, hex(0xD9A21B)),
     Decorate("Decorate", "tree", Side.Right, hex(0x2E7D4A)),
-    Shop("Shop", "presents", Side.Right, hex(0x9B6BE0)),
+    Shop("Shop", "presents", Side.Town, hex(0x9B6BE0)),
     Closet("Closet", "", Side.Right, hex(0xFF8FB0)),
-    Friends("Friends", "", Side.Right, hex(0x2EB5A5)),
+    Friends("Town Square", "", Side.Town, hex(0x2EB5A5)),
     Phone("Phone", "phone", Side.Right, hex(0x3D6FD6)),
     Snacks("Snacks", "cocoa_mug", Side.Right, hex(0xC98B5E)),
     Pets("Pets", "pet_penguin", Side.Right, hex(0xF2A93B)),
-    Party("Party Place", "balloon", Side.Right, hex(0xFF5FA2)),
+    Town("Town", "house", Side.Right, hex(0x3D6FD6)),
+    House("House", "house", Side.Hidden, hex(0x9A5B34)),   // visiting a friend (GameState.visiting)
+    Party("Party Place", "balloon", Side.Town, hex(0xFF5FA2)),
     Advent("Advent Calendar", "gift", Side.Hidden, hex(0xA02338)),
     Stickers("Sticker Book", "teddy", Side.Hidden, hex(0x9B6BE0)),
 }
@@ -551,13 +673,45 @@ val movies = listOf(
             Scene("Bells back on! Off flew Santa, ho ho ho! THE END 🔔", NIGHT_SKY, SNOW, listOf(Actor("sleigh", 0.0f, 55, up = 100f, dx = 0.6f, dy = 20f), Actor("reindeer", 0.22f, 55, up = 105f, dx = 0.6f, dy = 20f))),
         ),
     ),
+    Movie(
+        "All Alone at the North Pole", 5, "pet_penguin", listOf(
+            Scene("On Christmas Eve, everyone flew off on the sleigh... but Pip was asleep in the toy chest!", NIGHT_SKY, WOOD, listOf(Actor("toychest", 0.3f, 60), Actor("sleigh", 0.6f, 40, up = 120f, dx = 0.5f, dy = 30f)), snow = false),
+            Scene("Pip woke up. \"Hello? Anybody?\" The whole workshop was empty!", NIGHT_SKY, WOOD, listOf(Actor("@Pip", 0.5f, 110), Actor("presents", 0.85f, 50)), snow = false),
+            Scene("Then two cheeky penguins waddled in. They wanted Santa's cookies! 🍪", NIGHT_SKY, WOOD, listOf(Actor("pet_penguin", 0.9f, 55, dx = -0.3f), Actor("pet_penguin", 1.05f, 50, dx = -0.3f), Actor("cookie_sugar", 0.2f, 35)), snow = false),
+            Scene("Pip had a plan! Marbles on the floor... and a slippery sled ramp...", NIGHT_SKY, WOOD, listOf(Actor("@Pip", 0.25f, 100), Actor("sled", 0.65f, 40)), snow = false),
+            Scene("WHOOSH! The penguins slid right out the door and into a snowbank!", NIGHT_SKY, SNOW, listOf(Actor("pet_penguin", 0.2f, 50, dx = 0.7f, dy = 20f), Actor("pet_penguin", 0.05f, 45, dx = 0.7f, dy = 20f), Actor("snowman", 0.9f, 90))),
+            Scene("Santa came home and found the cookies safe. \"Ho ho ho! Well done, Pip!\"", NIGHT_SKY, WOOD, listOf(Actor("santa", 0.35f, 130), Actor("@Pip", 0.65f, 100), Actor("cookie_sugar", 0.85f, 30)), snow = false),
+            Scene("And the penguins got cookies too, because it's Christmas. THE END 🐧", DAY_SKY, SNOW, listOf(Actor("pet_penguin", 0.3f, 55), Actor("pet_penguin", 0.5f, 50), Actor("cookie_choco", 0.7f, 30), Actor("@Pip", 0.85f, 90))),
+        ),
+    ),
+    Movie(
+        "The Night We Met Santa", 6, "sleigh", listOf(
+            Scene("Two little elves stayed up really late. They wanted to SEE Santa! 👀", NIGHT_SKY, WOOD, listOf(Actor("@me", 0.25f, 100), Actor("@Pip", 0.45f, 90), Actor("tree", 0.8f, 130)), snow = false),
+            Scene("Thump! Something came down the chimney...", NIGHT_SKY, WOOD, listOf(Actor("fireplace", 0.5f, 100), Actor("presents", 0.8f, 50)), snow = false),
+            Scene("\"Ho ho ho! You're still awake?\" It was SANTA!", NIGHT_SKY, WOOD, listOf(Actor("santa", 0.6f, 140), Actor("@me", 0.2f, 100), Actor("@Pip", 0.36f, 90)), snow = false),
+            Scene("Oh no! The reindeer got spooked, and the presents fell out of the sleigh!", NIGHT_SKY, SNOW, listOf(Actor("sleigh", 0.3f, 50), Actor("reindeer", 0.6f, 60, dx = 0.3f), Actor("gift", 0.2f, 30), Actor("gift", 0.8f, 30))),
+            Scene("The elves helped find every present in the snow.", NIGHT_SKY, SNOW, listOf(Actor("@me", 0.25f, 100, dx = 0.1f), Actor("@Pip", 0.6f, 90, dx = 0.1f), Actor("gift", 0.45f, 30), Actor("presents", 0.85f, 50))),
+            Scene("Then Santa let them ride in the sleigh to deliver them all! WHEEE! 🛷", NIGHT_SKY, SNOW, listOf(Actor("sleigh", 0.05f, 55, up = 100f, dx = 0.6f, dy = 30f), Actor("reindeer", 0.27f, 55, up = 105f, dx = 0.6f, dy = 30f))),
+            Scene("Back home in bed, they smiled. Best. Night. EVER. THE END 🎅", NIGHT_SKY, WOOD, listOf(Actor("@me", 0.35f, 100), Actor("@Pip", 0.6f, 90)), snow = false),
+        ),
+    ),
+    Movie(
+        "That Snowy Christmas", 4, "snowman", listOf(
+            Scene("It was the snowiest Christmas EVER in Christmas Town. ❄️", DAY_SKY, SNOW, listOf(Actor("snowman", 0.3f, 110), Actor("tree", 0.75f, 130))),
+            Scene("So much snow! The roads were blocked and the sleigh got stuck.", DAY_SKY, SNOW, listOf(Actor("sleigh", 0.45f, 50), Actor("reindeer", 0.75f, 60, flip = true))),
+            Scene("Santa was so tired, he mixed up the presents! Maple got a drum, and Poppy got a robot!", NIGHT_SKY, WOOD, listOf(Actor("santa", 0.25f, 130), Actor("drum", 0.6f, 40), Actor("robot", 0.82f, 50)), snow = false),
+            Scene("Everyone was a bit sad... until Poppy started drumming a Christmas song! 🥁", DAY_SKY, SNOW, listOf(Actor("@Poppy", 0.4f, 110), Actor("drum", 0.62f, 40))),
+            Scene("Maple built the robot, and it danced along! Beep boop! 🤖", DAY_SKY, SNOW, listOf(Actor("@Maple", 0.3f, 110), Actor("robot", 0.65f, 60, dy = 20f))),
+            Scene("The whole town sang together in the snow. 🎶", DAY_SKY, SNOW, listOf(Actor("@Poppy", 0.2f, 100), Actor("@Maple", 0.42f, 100), Actor("@me", 0.64f, 100), Actor("tree", 0.88f, 120))),
+            Scene("The best present was being together with friends. THE END ❄️", NIGHT_SKY, SNOW, listOf(Actor("tree", 0.5f, 140), Actor("@Poppy", 0.2f, 90), Actor("@Maple", 0.8f, 90))),
+        ),
+    ),
 )
 
 
 // MARK: - Bank
 
 /** Mr. Silverbell, the old elf who runs the Christmas Town Bank. */
-val bankerLook = ElfLook(girl = false, skin = 1, hairStyle = HairStyle.Short, hairColor = 6, eye = 0, outfit = Outfit.Sweater, outfitColor = 2, hat = Hat.TopHat, hatColor = 2)
 const val BANKER = "Mr. Silverbell"
 
 /** Every night the bank adds a little extra to your savings: $5 for every $100 (up to $500 a night). */
@@ -577,3 +731,31 @@ val bankerChats = listOf(
     "Saving up is clever! Then you can buy something really BIG later. 🏠",
     "Santa keeps his money here too. But shhh, that's a secret! 🤫",
 )
+
+// MARK: - Friends' houses
+
+/** What a friend's house looks like inside (and its outside colours on the Town map). */
+class FriendHome(val wall: Long, val stripe: Long, val outside: Long, val placed: List<Placed>, val pet: PetKind?)
+
+private val homeColors = listOf(
+    0xE3F0D8L to 0xD3E6C4L, 0xF6D7E3L to 0xEFC3D3L, 0xFFF1C9L to 0xF6E2A6L,
+    0xD9D4F7L to 0xC6BFF0L, 0xD7ECF6L to 0xC2E0EFL, 0xFBE0CCL to 0xF4CDB0L,
+)
+private val outsideColors = listOf(0xF4E3C3L, 0xE8D5F2L, 0xD5EBDDL, 0xF7D9D9L, 0xD6E6F5L, 0xFFF0B8L)
+
+/** Every friend's house is a little different, but always the same for that friend. */
+fun homeOf(npc: Npc): FriendHome {
+    val r = kotlin.random.Random(npc.name.hashCode())
+    val (wall, stripe) = homeColors[r.nextInt(homeColors.size)]
+    val floorItems = Item.entries.filter { it.spot == Spot.Floor && it != Item.Bed }.shuffled(r).take(3)
+    val wallItems = Item.entries.filter { it.spot == Spot.Wall }.shuffled(r).take(2)
+    val placed = buildList {
+        if (r.nextBoolean()) add(Placed(0, Item.Rug, 0, 0.5f))
+        floorItems.zip(listOf(0.1f, 0.3f, 0.9f)).forEachIndexed { i, (item, x) -> add(Placed(1L + i, item, 0, x)) }
+        wallItems.zip(listOf(0.12f, 0.88f)).forEachIndexed { i, (item, x) -> add(Placed(10L + i, item, 0, x, 0.1f)) }
+    }
+    return FriendHome(wall, stripe, outsideColors[r.nextInt(outsideColors.size)], placed, if (r.nextInt(3) > 0) PetKind.entries.random(r) else null)
+}
+
+/** You can have this many friends over at your house at once. */
+const val MAX_HOME_GUESTS = 3

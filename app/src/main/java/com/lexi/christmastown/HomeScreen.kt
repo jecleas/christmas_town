@@ -131,7 +131,7 @@ private fun SoundToggle(icon: String, on: Boolean, onClick: () -> Unit) {
 }
 
 /** What the little badge on each icon says: "!" = something to do, "✓" = done, "🔒" = locked. */
-private fun badge(game: GameState, p: Place): String? {
+fun badge(game: GameState, p: Place): String? {
     val s = game.s
     fun job(k: JobKind) = s.jobs.firstOrNull { it.kind == k }
     fun jobBadge(k: JobKind, unlock: Int): String? = when {
@@ -150,6 +150,7 @@ private fun badge(game: GameState, p: Place): String? {
         Place.Pets -> if (s.pets.any { it.fullness(game.now) < 0.4f || it.cleanness(game.now) < 0.4f }) "!" else null
         Place.Decorate -> if (Item.entries.any { game.available(it) > 0 }) "New" else null
         Place.Friends -> if (npcs.any { it.name !in s.talkedToday }) "!" else null
+        Place.Town -> if (badge(game, Place.Park) == "!") "!" else null
         Place.Party -> if (!game.partyOpen) "🔒" else if (game.partyGuests.any { it.name !in s.talkedToday }) "!" else null
         Place.Phone -> (listOf(GROUP) + game.met).sumOf { game.unread(it) }.takeIf { it > 0 }?.toString() ?: if (game.groupHasNews) "!" else null
         else -> null
@@ -171,6 +172,7 @@ private fun Icon(game: GameState, p: Place) {
                     Place.Stable -> Px(p.sprite, 34.dp)
                     Place.Sleigh -> Px(p.sprite, 28.dp)
                     Place.Phone -> Px(p.sprite, 46.dp)
+                    Place.Town -> Px(houseImage(hex(0xF4E3C3), Pal.red), 46.dp)
                     Place.SantaList -> Px(p.sprite, 50.dp)
                     else -> Px(p.sprite, 42.dp)
                 }
@@ -197,43 +199,11 @@ fun RoomScene(game: GameState, floor: Int, hub: Boolean) {
         val w = maxWidth.value
         val h = maxHeight.value
         val floorY = h * 0.66f
-        Canvas(Modifier.fillMaxSize()) {
-            val u = density
-            drawRect(hex(room.wall))
-            var x = 0f
-            while (x < w) { drawRect(hex(room.stripe), Offset(x * u, 0f), Size(12 * u, floorY * u)); x += 44f }
-            // window with falling snow (a round one in the loft)
-            val wx = w / 2 - 60; val wy = 30f
-            drawRect(Pal.ink, Offset((wx - 5) * u, (wy - 5) * u), Size(130 * u, 110 * u))
-            drawRect(hex(0x1D2B53), Offset(wx * u, wy * u), Size(120 * u, 100 * u))
-            for (i in 0 until 12) {
-                val sy = (wy + ((i * 31 + game.now / 40) % 96)) * u
-                drawRect(Color.White, Offset((wx + (i * 37) % 114) * u, sy), Size(4 * u, 4 * u))
-            }
-            drawRect(Color.White, Offset(wx * u, (wy + 88) * u), Size(120 * u, 12 * u))
-            drawRect(Pal.ink, Offset((wx + 57) * u, wy * u), Size(6 * u, 100 * u))
-            // wooden floor
-            drawRect(hex(0x9A5B34), Offset(0f, floorY * u), Size(size.width, size.height))
-            var y = floorY + 18
-            while (y < h) { drawRect(hex(0x7A4428), Offset(0f, y * u), Size(size.width, 3 * u)); y += 22 }
-        }
-
-        val pixel = 3.2f
-        val items = s.placed.filter { it.floor == floor }.sortedBy { it.item.spot != Spot.Rug }
-        for (p in items) {
-            val img = Sprites.named(p.item.sprite)
-            val iw = img.width * pixel
-            val ih = img.height * pixel
-            val cx = 14 + p.x * (w - 28)
-            val top = when (p.item.spot) {
-                Spot.Floor -> floorY - ih + 6
-                Spot.Rug -> floorY + 8
-                Spot.Wall -> 20 + p.y * (floorY - 150 - ih).coerceAtLeast(10f)
-            }
-            Box(Modifier.offset((cx - iw / 2).dp, top.dp)) { Px(img, ih.dp) }
-        }
+        RoomBase(room.wall, room.stripe, s.placed.filter { it.floor == floor }, game.now)
 
         if (hub) {
+            // Friends you invited over stand behind you (tap them to chat)
+            s.homeGuests.mapNotNull { n -> npcs.firstOrNull { it.name == n } }.forEachIndexed { i, npc -> HomeGuest(game, npc, i) }
             // Your elf, your main pet and a baby reindeer buddy
             Box(Modifier.align(Alignment.BottomCenter).padding(bottom = (h - floorY - 70).coerceAtLeast(0f).dp)) {
                 Row(verticalAlignment = Alignment.Bottom) {
@@ -274,6 +244,70 @@ fun RoomScene(game: GameState, floor: Int, hub: Boolean) {
                 if (here.isEmpty() && s.pets.isNotEmpty()) Txt("No pets in here right now. They move around! 🐾", 12, Pal.brown)
             }
         }
+    }
+}
+
+/** A room's walls, snowy window, wooden floor and furniture. Used for your house and your friends' houses. */
+@Composable
+fun RoomBase(wall: Long, stripe: Long, placed: List<Placed>, now: Long) {
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val w = maxWidth.value
+        val h = maxHeight.value
+        val floorY = h * 0.66f
+        Canvas(Modifier.fillMaxSize()) {
+            val u = density
+            drawRect(hex(wall))
+            var x = 0f
+            while (x < w) { drawRect(hex(stripe), Offset(x * u, 0f), Size(12 * u, floorY * u)); x += 44f }
+            // window with falling snow (a round one in the loft)
+            val wx = w / 2 - 60; val wy = 30f
+            drawRect(Pal.ink, Offset((wx - 5) * u, (wy - 5) * u), Size(130 * u, 110 * u))
+            drawRect(hex(0x1D2B53), Offset(wx * u, wy * u), Size(120 * u, 100 * u))
+            for (i in 0 until 12) {
+                val sy = (wy + ((i * 31 + now / 40) % 96)) * u
+                drawRect(Color.White, Offset((wx + (i * 37) % 114) * u, sy), Size(4 * u, 4 * u))
+            }
+            drawRect(Color.White, Offset(wx * u, (wy + 88) * u), Size(120 * u, 12 * u))
+            drawRect(Pal.ink, Offset((wx + 57) * u, wy * u), Size(6 * u, 100 * u))
+            // wooden floor
+            drawRect(hex(0x9A5B34), Offset(0f, floorY * u), Size(size.width, size.height))
+            var y = floorY + 18
+            while (y < h) { drawRect(hex(0x7A4428), Offset(0f, y * u), Size(size.width, 3 * u)); y += 22 }
+        }
+
+        val pixel = 3.2f
+        val items = placed.sortedBy { it.item.spot != Spot.Rug }
+        for (p in items) {
+            val img = Sprites.named(p.item.sprite)
+            val iw = img.width * pixel
+            val ih = img.height * pixel
+            val cx = 14 + p.x * (w - 28)
+            val top = when (p.item.spot) {
+                Spot.Floor -> floorY - ih + 6
+                Spot.Rug -> floorY + 8
+                Spot.Wall -> 20 + p.y * (floorY - 150 - ih).coerceAtLeast(10f)
+            }
+            Box(Modifier.offset((cx - iw / 2).dp, top.dp)) { Px(img, ih.dp) }
+        }
+
+    }
+}
+
+/** A friend visiting your house. Tap them to chat; they say something friendly. */
+@Composable
+private fun androidx.compose.foundation.layout.BoxScope.HomeGuest(game: GameState, npc: Npc, i: Int) {
+    var said by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(said) { if (said != null) { kotlinx.coroutines.delay(2500); said = null } }
+    // bottom corners of the room (the icons are higher up), a third friend by the table
+    val x = listOf(-140, 140, -150)[i % 3]
+    Column(
+        Modifier.align(Alignment.BottomCenter).padding(bottom = (if (i == 2) 150 else 34).dp).offset(x = x.dp)
+            .squish { said = npc.lines.random(); game.chat(npc); Audio.play(Sfx.Message) },
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        said?.let { Txt(it, 11, align = TextAlign.Center, modifier = Modifier.width(130.dp).panel(Color.White, radius = 6.dp).padding(3.dp)) }
+        Bob(3f, 700 + i * 150) { ElfPx(npc.look, if (i == 2) 84.dp else 100.dp) }
+        Txt(npc.name, 11, Color.White, modifier = Modifier.background(Pal.ink.copy(alpha = 0.7f), RoundedCornerShape(5.dp)).padding(horizontal = 4.dp))
     }
 }
 

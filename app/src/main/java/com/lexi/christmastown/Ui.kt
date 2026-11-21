@@ -154,9 +154,11 @@ fun backgroundFor(p: Place?): Brush = when (p) {
     Place.Stickers -> Brush.verticalGradient(listOf(hex(0x5B3A8C), hex(0x9B6BE0)))
     Place.Party -> Brush.verticalGradient(listOf(hex(0x3A1F5C), hex(0xC2407E)))
     Place.Bank -> Brush.verticalGradient(listOf(hex(0xFFF1C9), hex(0xE9C77B)))
+    Place.Town -> Brush.verticalGradient(listOf(hex(0x2C4F8C), hex(0x9BC8EE)))
+    Place.House -> Brush.verticalGradient(listOf(hex(0x3A2A4A), hex(0x7A5A6A)))
 }
 
-private val darkPlaces = setOf(null, Place.Decorate, Place.Snacks, Place.Phone, Place.Stable, Place.SantaList, Place.Sleigh, Place.Friends, Place.Closet, Place.Park, Place.Advent, Place.Stickers, Place.Party)
+private val darkPlaces = setOf(null, Place.Decorate, Place.Snacks, Place.Phone, Place.Stable, Place.SantaList, Place.Sleigh, Place.Friends, Place.Closet, Place.Park, Place.Advent, Place.Stickers, Place.Party, Place.Town, Place.House)
 fun textOn(p: Place?) = if (p in darkPlaces) Color.White else Pal.ink
 
 // MARK: - The whole app
@@ -189,6 +191,8 @@ fun GameApp(game: GameState) {
                 Place.Stickers -> Music.JingleBells
                 Place.Party -> Music.WeWish
                 Place.Bank -> Music.JollyOldStNicholas
+                Place.Town -> Music.GoodKingWenceslas
+                Place.House -> Music.SilentNight
             }
         }
         LaunchedEffect(song) { Audio.music(song) }
@@ -203,7 +207,7 @@ fun GameApp(game: GameState) {
                         creating -> Activity(game, "👗 My Elf", onBack = if (game.s.hasElf) ({ game.showCreator = false }) else null) { CreatorScreen(game) }
                         game.delivering -> DeliveryScreen(game)
                         else -> Crossfade(game.place, label = "place") { p ->
-                            if (p == null) HubScreen(game) else Activity(game, p.title, onBack = { game.go(null) }) { PlaceScreen(game, p) }
+                            if (p == null) HubScreen(game) else Activity(game, if (p == Place.House) "${game.visiting}'s House" else p.title, onBack = { game.back() }) { PlaceScreen(game, p) }
                         }
                     }
                     ToastView(game)
@@ -239,6 +243,8 @@ private fun PlaceScreen(game: GameState, p: Place) = when (p) {
     Place.Stickers -> StickerScreen(game)
     Place.Party -> PartyScreen(game)
     Place.Bank -> BankScreen(game)
+    Place.Town -> TownScreen(game)
+    Place.House -> FriendHouseScreen(game)
 }
 
 /** A full-screen activity: big Back button, title, money and energy, then the content. */

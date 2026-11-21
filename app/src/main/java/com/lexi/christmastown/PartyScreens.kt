@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
@@ -54,12 +55,13 @@ import kotlin.random.Random
 private val partyPink = hex(0xFF5FA2)
 private val balloonColors = listOf(hex(0xE5394B), hex(0x3D6FD6), hex(0x3FAF5A), hex(0x9B6BE0), hex(0xFF8FB0), hex(0xFF9A3C))
 
-private enum class PartyTab(val title: String) { Juice("🧃 Juice"), Games("🎈 Games"), Friends("💬 Friends"), Movies("🎬 Movies") }
+private enum class PartyTab(val title: String) { Juice("🧃 Juice"), Games("🎈 Games"), Friends("💬 Chat"), Movies("🎬 Movies"), Dance("💃 Dance") }
 
 @Composable
 fun PartyScreen(game: GameState) {
     var tab by remember { mutableStateOf(PartyTab.Juice) }
     var busy by remember { mutableStateOf(false) }   // playing a game or watching a movie: hide the tabs
+    val brought = remember { mutableStateListOf<Npc>() }   // friends you came out of the movie with
     if (!game.partyOpen) {
         LockedParty(game)
     } else {
@@ -69,7 +71,8 @@ fun PartyScreen(game: GameState) {
                 PartyTab.Juice -> JuiceBar(game)
                 PartyTab.Games -> PartyGames(game) { busy = it }
                 PartyTab.Friends -> PartyFriends(game)
-                PartyTab.Movies -> Cinema(game) { busy = it }
+                PartyTab.Movies -> Cinema(game, { busy = it }) { fs -> brought.clear(); brought.addAll(fs); busy = false; tab = PartyTab.Dance }
+                PartyTab.Dance -> DanceFloor(game, brought)
             }
         }
     }
@@ -390,7 +393,7 @@ private enum class CinemaStep(val title: String) { Pick("🎬 Movie"), Friends("
 private class Moviegoer(val look: ElfLook, val name: String, val seat: Pair<Int, Int>)
 
 @Composable
-private fun Cinema(game: GameState, setBusy: (Boolean) -> Unit) {
+private fun Cinema(game: GameState, setBusy: (Boolean) -> Unit, onDance: (List<Npc>) -> Unit) {
     var step by remember { mutableStateOf(CinemaStep.Pick) }
     var movie by remember { mutableStateOf(movies.first()) }
     val friends = remember { mutableStateListOf<Npc>() }
@@ -414,7 +417,7 @@ private fun Cinema(game: GameState, setBusy: (Boolean) -> Unit) {
             CinemaStep.Watch -> {
                 val group = listOf(Moviegoer(game.s.look, "You", seats[0])) + friends.mapIndexed { i, f -> Moviegoer(f.look, f.name, seats[i + 1]) }
                 val snacks = remember { order.flatMap { (s, n) -> List(n) { s } }.mapIndexed { i, s -> (i % group.size) to s } }
-                MoviePlayer(game, movie, group, snacks) { go(CinemaStep.Pick) }
+                MoviePlayer(game, movie, group, snacks, onDance = { go(CinemaStep.Pick); onDance(friends.toList()) }) { go(CinemaStep.Pick) }
             }
         }
     }
@@ -446,6 +449,7 @@ private fun BringFriends(game: GameState, movie: Movie, friends: MutableList<Npc
     Column(Modifier.fillMaxWidth().panel().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Txt("Who do you want to bring?", 20, partyPink)
         Txt("Tap up to $MAX_MOVIE_FRIENDS friends. Bringing a friend makes you better friends (+1 💖)!", 14, Pal.brown, align = TextAlign.Center)
+        Column(Modifier.heightIn(max = 430.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         for (row in npcs.chunked(3)) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for (npc in row) {
                 val coming = npc in friends
@@ -462,6 +466,7 @@ private fun BringFriends(game: GameState, movie: Movie, friends: MutableList<Npc
                     Txt(if (coming) "Coming! 🎉" else hearts(game.hearts(npc)), if (coming) 13 else 8, if (coming) partyPink else Pal.ink)
                 }
             }
+        }
         }
         val n = 1 + friends.size
         Txt("🎟 $n ticket${if (n > 1) "s" else ""} × ${money(movie.price)} = ${money(n * movie.price)}", 18)
@@ -539,7 +544,7 @@ private fun SnackBar(order: MutableMap<MovieSnack, Int>, onDone: () -> Unit) {
 }
 
 @Composable
-private fun MoviePlayer(game: GameState, movie: Movie, group: List<Moviegoer>, bought: List<Pair<Int, MovieSnack>>, onLeave: () -> Unit) {
+private fun MoviePlayer(game: GameState, movie: Movie, group: List<Moviegoer>, bought: List<Pair<Int, MovieSnack>>, onDance: () -> Unit = {}, onLeave: () -> Unit) {
     GameSong(game, Music.SilentNight)
     var scene by remember { mutableIntStateOf(0) }
     var st by remember { mutableFloatStateOf(0f) }     // seconds into this scene
@@ -582,7 +587,8 @@ private fun MoviePlayer(game: GameState, movie: Movie, group: List<Moviegoer>, b
             if (mine != null) Btn(Pal.gold, Modifier.width(130.dp), onClick = { snacks.remove(mine); game.munch(mine.second) }) {
                 Px(mine.second.sprite, 22.dp); Txt("Munch!", 16, Pal.ink)
             }
-            Btn(if (ended) "Back to the party 🎉" else "🚪 Leave", if (ended) partyPink else Pal.red, 16, Modifier.width(if (ended) 240.dp else 110.dp)) { onLeave() }
+            if (ended) Btn("💃 Go dancing!", partyPink, 16, Modifier.width(180.dp), onClick = onDance)
+            Btn(if (ended) "🎉 Back" else "🚪 Leave", if (ended) Pal.purple else Pal.red, 16, Modifier.width(110.dp)) { onLeave() }
         }
         if (!ended) Txt("Scene ${scene + 1} of ${movie.scenes.size}", 13, Color.White)
     }
@@ -757,3 +763,129 @@ private fun Cinema3D(game: GameState, movie: Movie, group: List<Moviegoer>, snac
     }
 }
 
+
+// ======================================================================
+// MARK: Dance floor: dance with your friends and meet new elves
+// ======================================================================
+
+private enum class Move(val label: String) { Spin("🌀 Spin"), Jump("⬆️ Jump"), Wiggle("〰️ Wiggle"), Clap("👏 Clap") }
+private const val MOVE_SECONDS = 0.8f
+private const val DANCE_PARTY_MOVES = 12
+
+/** Where each dancer stands: x centre, feet y, height. The middle of the front row is you. */
+private val danceSpots = listOf(
+    Triple(70f, 410f, 120f), Triple(336f, 410f, 120f),                                   // front row, either side of you
+    Triple(45f, 300f, 88f), Triple(140f, 300f, 88f), Triple(266f, 300f, 88f), Triple(361f, 300f, 88f), // back row
+)
+private val youSpot = Triple(203f, 420f, 140f)
+
+@Composable
+private fun DanceFloor(game: GameState, brought: List<Npc>) {
+    GameSong(game, Music.DeckTheHalls)
+    // the friends you came with, a couple of elves you haven't met yet, and whoever's at the party today
+    val crowd = remember(brought.toList()) {
+        val unmet = npcs.filter { game.hearts(it) == 0 && it !in brought }.shuffled(Random(game.s.day)).take(2)
+        (brought + unmet + game.partyGuests).distinct().take(danceSpots.size)
+    }
+    var t by remember { mutableFloatStateOf(0f) }
+    val moves = remember { androidx.compose.runtime.mutableStateMapOf<Int, Pair<Move, Float>>() }   // dancer (-1 = you) to (move, when)
+    var count by remember { mutableIntStateOf(0) }
+    var said by remember { mutableStateOf<Pair<Int, String>?>(null) }
+
+    LaunchedEffect(Unit) { val start = withFrameMillis { it }; while (true) withFrameMillis { t = (it - start) / 1000f } }
+    LaunchedEffect(Unit) {   // the others bust a move now and then
+        while (true) { delay(1200L + Random.nextLong(1500)); if (crowd.isNotEmpty()) moves[crowd.indices.random()] = Move.entries.random() to t }
+    }
+    LaunchedEffect(said) { if (said != null) { delay(3200); said = null } }
+
+    fun dance(m: Move) {
+        moves[-1] = m to t
+        crowd.indices.forEach { moves[it] = m to t + 0.12f * (it + 1) }   // everyone copies you!
+        count++
+        Audio.play(Sfx.Pop)
+        if (count == DANCE_PARTY_MOVES) game.danceParty(crowd)
+    }
+
+    fun tap(i: Int) {
+        val npc = crowd[i]
+        said = if (game.hearts(npc) == 0) i to "Hi! I'm ${npc.name}! ${npc.about}. Nice to meet you! 💖" else i to partyLines.random()
+        game.meet(npc)
+        Audio.play(Sfx.Message)
+    }
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Box(Modifier.size(406.dp, 440.dp).clip(RoundedCornerShape(12.dp)).border(3.dp, Pal.ink, RoundedCornerShape(12.dp))) {
+            Canvas(Modifier.fillMaxSize()) {
+                val u = density
+                drawRect(Brush.verticalGradient(listOf(hex(0x1A1024), hex(0x3A1F5C))))
+                // light-up dance floor
+                val top = 200f; val rows = 5; val cols = 8; val tw = 406f / cols; val th = 48f
+                for (r in 0 until rows) for (c in 0 until cols) {
+                    val col = balloonColors[(r * 3 + c + (t * 2.5f).toInt()) % balloonColors.size]
+                    drawRect(Pal.ink, Offset(c * tw * u, (top + r * th) * u), Size(tw * u, th * u))
+                    drawRect(col.copy(alpha = 0.55f + 0.3f * sin(t * 5f + r + c)), Offset((c * tw + 2) * u, (top + r * th + 2) * u), Size((tw - 4) * u, (th - 4) * u))
+                }
+                // spinning disco ball and its sparkles
+                val ball = Offset(203f * u, 44f * u)
+                drawLine(Color.White.copy(alpha = 0.5f), Offset(ball.x, 0f), ball, 2 * u)
+                drawCircle(Pal.ink, 28 * u, ball); drawCircle(hex(0xB8BFCC), 26 * u, ball)
+                for (k in 0 until 16) {
+                    val a = k * 0.7f + t * 2f
+                    drawRect(if (k % 3 == 0) Color.White else hex(0x8D96A8), ball + Offset(kotlin.math.cos(a) * 16 * u, (k % 4 - 1.5f) * 9 * u), Size(5 * u, 5 * u))
+                }
+                for (k in 0 until 14) {
+                    val a = k * 0.45f + t * 0.8f
+                    val p = Offset((203f + kotlin.math.cos(a) * (60f + k * 12f)) * u, (130f + sin(a * 1.3f) * 60f + k * 14f) * u)
+                    drawCircle(balloonColors[k % balloonColors.size].copy(alpha = 0.35f), 6 * u, p)
+                }
+            }
+            // back row first, then the front row, then you in the middle
+            for (i in crowd.indices.sortedBy { danceSpots[it].second }) {
+                val (x, feet, h) = danceSpots[i]
+                DancerView(crowd[i].look, crowd[i].name, x, feet, h, moves[i], t, i, isNew = game.hearts(crowd[i]) == 0, said = said?.takeIf { it.first == i }?.second) { tap(i) }
+            }
+            val (x, feet, h) = youSpot
+            DancerView(game.s.look, "You", x, feet, h, moves[-1], t, 7, isNew = false, said = null) {}
+            Txt("💃 DANCE FLOOR 🕺", 16, Color.White, modifier = Modifier.align(Alignment.TopStart).padding(8.dp))
+        }
+        Txt(if (count < DANCE_PARTY_MOVES) "Tap a move, everyone copies you! Dance party: $count/$DANCE_PARTY_MOVES" else "🎉 DANCE PARTY! Keep dancing! 🎉", 15, Color.White, align = TextAlign.Center)
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            for (m in Move.entries) Btn(m.label, partyPink, 15, Modifier.weight(1f)) { dance(m) }
+        }
+        Txt("Tap an elf to chat. Elves with a NEW tag become new friends! 💖", 13, Color.White, align = TextAlign.Center)
+    }
+}
+
+@Composable
+private fun androidx.compose.foundation.layout.BoxScope.DancerView(
+    look: ElfLook, name: String, x: Float, feet: Float, h: Float, move: Pair<Move, Float>?, t: Float, seed: Int, isNew: Boolean, said: String?, onTap: () -> Unit,
+) {
+    val img = remember(look) { Sprites.elf(look) }
+    val w = h * img.width / img.height
+    val k = move?.let { (t - it.second) / MOVE_SECONDS } ?: -1f
+    val active = k in 0f..1f
+    val m = move?.first
+    Column(
+        Modifier.offset((x - 70).dp, (feet - h - 52).dp).width(140.dp).squish(onClick = onTap),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(Modifier.height(34.dp), contentAlignment = Alignment.BottomCenter) {
+            when {
+                said != null -> Txt(said, 11, align = TextAlign.Center, modifier = Modifier.width(140.dp).panel(Color.White, radius = 6.dp).padding(3.dp), maxLines = 3)
+                isNew -> Tag("NEW", Pal.green, 11)
+                active && m == Move.Clap -> Txt("👏", 22)
+            }
+        }
+        Px(img, h.dp, Modifier.graphicsLayer {
+            val sway = sin(t * 4f + seed)
+            when {
+                active && m == Move.Spin -> scaleX = kotlin.math.cos(k * 2f * Math.PI.toFloat())
+                active && m == Move.Jump -> translationY = -sin(k * Math.PI.toFloat()) * 40f * density
+                active && m == Move.Wiggle -> rotationZ = sin(k * 25f) * 14f
+                active && m == Move.Clap -> { scaleY = 1f - 0.08f * sin(k * 12f); translationY = -4f * density }
+                else -> { rotationZ = sway * 5f; translationY = -kotlin.math.abs(sway) * 5f * density }
+            }
+        })
+        Txt(name, 11, Color.White, maxLines = 1, modifier = Modifier.background(Pal.ink.copy(alpha = 0.6f), RoundedCornerShape(4.dp)).padding(horizontal = 4.dp))
+    }
+}

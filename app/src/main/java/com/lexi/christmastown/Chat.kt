@@ -238,7 +238,8 @@ object ElfBrain {
                 "Pepper" -> "Hello, sweetie! 🍪 " + (mem(game, "favCookie")?.let { "Still loving $it cookies?" } ?: "Want a warm cookie?")
                 "Holly" -> "Greetings, $name! 🔬 I just finished inventing... a better spoon."
                 "Frost" -> "Yo yo, $name! ❄️ Why are you so cool? Oh wait, that's me. 😎"
-                else -> "Oh! Hi $name 👋 " + (mem(game, "favReindeer")?.let { "$it says hi too! 🦌" } ?: "The reindeer say hi! 🦌")
+                "Sprout" -> "Oh! Hi $name 👋 " + (mem(game, "favReindeer")?.let { "$it says hi too! 🦌" } ?: "The reindeer say hi! 🦌")
+                else -> npcs.firstOrNull { it.name == elf }?.hello?.ifEmpty { null } ?: "Hi $name! 👋"
             }
             has(t, "how are you", "how r u", "hru", "how's it going", "hows it going", "how are u", "you ok", "u ok") -> when (elf) {
                 "Jingle" -> "SUPER good! I just made a teddy bear with button eyes! 🧸 How are YOU?"
@@ -246,7 +247,8 @@ object ElfBrain {
                 "Pepper" -> "Warm and toasty, thank you! 🍪 My oven smells like cinnamon. How are you, dear?"
                 "Holly" -> "Excellent! Only one small explosion today 💥 (it was glitter). How are you?"
                 "Frost" -> "Ice to see you! 🧊 Get it? I'm great! How are you?"
-                else -> "Pretty good! Comet licked my face this morning 🦌😊 How are you?"
+                "Sprout" -> "Pretty good! Comet licked my face this morning 🦌😊 How are you?"
+                else -> "I'm great, thanks for asking! 😊 How are YOU?"
             }
             has(t, "sad", "upset", "cry", "crying", "lonely", "bad day", "mad", "angry", "scared", "worried", "tired") ->
                 "Aww, I'm sorry you feel that way. 💖 Want a virtual hug? 🤗 If something's really wrong, telling a grown-up you trust always helps. I'm here to chat too!"
@@ -256,9 +258,9 @@ object ElfBrain {
             has(t, "are you real", "are you a robot", "are you ai", "are you a bot", "are you human", "is this real") ->
                 "I'm $elf, an elf in Christmas Town! 🧝 I'm a character in this game, so I live inside your phone. But our friendship is real fun! 💖"
             has(t, "your name", "who are you", "what's your name", "whats your name") ->
-                "I'm $elf! " + when (elf) { "Jingle" -> "Toy maker extraordinaire 🔧🧸"; "Twinkle" -> "Party planner and glitter expert ✨🎉"; "Pepper" -> "Head baker of Christmas Town 🍪"; "Holly" -> "Inventor of mostly-working gadgets 🔬"; "Frost" -> "Snow sculptor and joke champion ❄️😆"; else -> "I look after Santa's reindeer 🦌" }
+                "I'm $elf! " + when (elf) { "Jingle" -> "Toy maker extraordinaire 🔧🧸"; "Twinkle" -> "Party planner and glitter expert ✨🎉"; "Pepper" -> "Head baker of Christmas Town 🍪"; "Holly" -> "Inventor of mostly-working gadgets 🔬"; "Frost" -> "Snow sculptor and joke champion ❄️😆"; "Sprout" -> "I look after Santa's reindeer 🦌"; else -> npcs.firstOrNull { it.name == elf }?.about ?: "" }
             has(t, "what do you do", "your job", "what's your job", "whats your job") ->
-                when (elf) { "Jingle" -> "I make toys! Trains, robots, teddy bears... ALL the toys! 🔧"; "Twinkle" -> "I plan the BEST parties in the North Pole ✨🎉"; "Pepper" -> "I bake cookies for Santa and everyone! 🍪"; "Holly" -> "I invent things! Toy machines, snow cannons, self-stirring bowls... 🔬"; "Frost" -> "I make snow sculptures and tell the BEST jokes ⛄😆"; else -> "I feed and brush the reindeer. They're my best friends 🦌🥕" }
+                when (elf) { "Jingle" -> "I make toys! Trains, robots, teddy bears... ALL the toys! 🔧"; "Twinkle" -> "I plan the BEST parties in the North Pole ✨🎉"; "Pepper" -> "I bake cookies for Santa and everyone! 🍪"; "Holly" -> "I invent things! Toy machines, snow cannons, self-stirring bowls... 🔬"; "Frost" -> "I make snow sculptures and tell the BEST jokes ⛄😆"; "Sprout" -> "I feed and brush the reindeer. They're my best friends 🦌🥕"; else -> npcs.firstOrNull { it.name == elf }?.about ?: "I help out around town! 🏘️" }
             has(t, "money", "paid", "pay", "rich", "coins", "dollars") ->
                 if (s.paidToday) "You earned ${money(s.earnedToday)} today! 💰 Spend it in the Shop, or save it in the Bank!"
                 else "Santa pays ${money(PAY_PER_TWO_JOBS)} for every 2 jobs, and ${money(SLEIGH_BONUS)} extra for the sleigh! You have ${jobsLeft.size} jobs left today! 📋"
@@ -290,7 +292,8 @@ object ElfBrain {
                 "Pepper" -> "Warm cookies straight from the oven 🍪 nothing better!"
                 "Holly" -> "Gears! Springs! Anything that goes BOING! 🔩"
                 "Frost" -> "Snow days. And puns. Snow-puns are the best. ❄️"
-                else -> "Reindeer. All of them. Even the grumpy ones 🦌💕"
+                "Sprout" -> "Reindeer. All of them. Even the grumpy ones 🦌💕"
+                else -> npcs.firstOrNull { it.name == elf }?.favorite?.ifEmpty { null } ?: "Christmas, of course! 🎄"
             }
             has(t, "love you", "you're cool", "youre cool", "you are cool", "you're nice", "you're awesome", "you're funny", "best friend", "like you") ->
                 pick("Aww, you're the BEST! 💖", "You just made my whole day! 🥰", "Best friends forever! 🤝✨")

@@ -98,6 +98,10 @@ sealed interface Overlay {
     val earnedToday: Int = 0,
     // Bank
     val bankSaved: Int = 0,
+    // Town: friends visiting your house today, and houses you've visited today
+    val homeGuests: List<String> = emptyList(),
+    val visitedToday: Set<String> = emptySet(),
+    val dancedDay: Int = 0,
 )
 
 /** Stickers you've earned just by what's in your save (things you own, pets, friends...). */
@@ -115,6 +119,7 @@ fun Save.withStickers(): Save {
         if (levelFor(workdays) >= MAX_LEVEL) add("level8")
         if (christmasDone) add("christmas")
         if (adventOpened.isNotEmpty()) add("advent")
+        if (hearts.count { it.value > 0 } >= 10) add("friends10")
     }
     return if (stickers.containsAll(earned)) this else copy(stickers = stickers + earned)
 }
@@ -254,7 +259,7 @@ class GameState(private val prefs: SharedPreferences) {
             copy(
                 day = day + 1, energy = 100, paidToday = false, fed = emptySet(), brushed = emptySet(),
                 talkedToday = emptySet(), jobs = jobsFor(levelFor(workdays)), kids = makeKids(listOf(5, 5, 5, 5, 5, 5, 6, 6)[levelFor(workdays) - 1]), kidIndex = 0,
-                washed = emptySet(), juiceShared = emptySet(), paidPairs = 0, sleighBonusPaid = false, earnedToday = 0, bankSaved = bankSaved + interest,
+                washed = emptySet(), juiceShared = emptySet(), paidPairs = 0, sleighBonusPaid = false, earnedToday = 0, bankSaved = bankSaved + interest, homeGuests = emptyList(), visitedToday = emptySet(),
             )
         }
         overlay = Overlay.Morning(s.day, worked, interest)
@@ -741,6 +746,23 @@ class GameState(private val prefs: SharedPreferences) {
         say("Munch munch! ${snack.title} +${snack.energy} ⚡")
     }
 
+    /** Say hi to an elf. If you've never met them before, they become your new friend! */
+    fun meet(npc: Npc) {
+        val isNew = hearts(npc) == 0
+        chat(npc)
+        if (isNew) { say("You made a new friend: ${npc.name}! 💖 They're in your phone now 📱"); Audio.play(Sfx.Ding) }
+    }
+
+    /** Lots of dancing together: everyone on the dance floor gets +1 💖 (once a day). */
+    fun danceParty(dancers: List<Npc>) {
+        sticker("dance")
+        if (s.dancedDay == s.day) { say("What a dance party! 🎉💃"); return }
+        update { copy(dancedDay = day, hearts = dancers.fold(hearts) { h, f -> h.add(f.name, 1) }.mapValues { it.value.coerceAtMost(5) }) }
+        say("DANCE PARTY! 🎉 Everyone loved your moves! +1 💖 for all your dance friends")
+        Audio.play(Sfx.LevelUp)
+        dancers.forEach { checkBestFriend(it) }
+    }
+
     fun balloonsDone(popped: Int) {
         if (popped >= 25) sticker("balloons")
         if (popped > s.balloonBest) { update { copy(balloonBest = popped) }; say("New best: $popped balloons! 🎈🏆") }
@@ -748,6 +770,45 @@ class GameState(private val prefs: SharedPreferences) {
     }
 
     fun go(p: Place?) { place = p }
+
+    /** The Back button: places in town go back to the Town map, everything else to your house. */
+    fun back() { place = if (place?.side == Side.Town || place == Place.House) Place.Town else null }
+
+    // MARK: Town & friends' houses
+
+    /** Whose house you're visiting right now (not saved). */
+    var visiting by mutableStateOf<String?>(null)
+
+    fun visit(npc: Npc) { visiting = npc.name; place = Place.House }
+
+    /** Knock knock! The first visit each day, your friend makes you hot cocoa. */
+    fun arriveAt(npc: Npc): String {
+        chat(npc)
+        if (npc.name in s.visitedToday) return "Back again? Yay! Make yourself at home 🏠"
+        update { copy(visitedToday = visitedToday + npc.name, energy = (energy + 10).coerceAtMost(100)) }
+        Audio.play(Sfx.Ding)
+        return "Welcome to my house, ${s.name}! Have some hot cocoa ☕ (+10 ⚡)"
+    }
+
+    /** Invite a friend to come over to your house for the rest of the day. */
+    fun invite(npc: Npc) {
+        when {
+            npc.name in s.homeGuests -> say("${npc.name} is already at your house! 🏠")
+            s.homeGuests.size >= MAX_HOME_GUESTS -> say("Your house is full! $MAX_HOME_GUESTS friends at a time 🏠")
+            else -> {
+                update { copy(homeGuests = homeGuests + npc.name, hearts = hearts.add(npc.name, 1).mapValues { it.value.coerceAtMost(5) }) }
+                say("${npc.name} is coming over to your house! 🏠💖")
+                Audio.play(Sfx.Ding)
+                checkBestFriend(npc)
+            }
+        }
+    }
+
+    /** Say goodbye to a friend at your house. */
+    fun sendHome(name: String) {
+        update { copy(homeGuests = homeGuests - name) }
+        say("Bye bye, $name! 👋")
+    }
 
     fun toggleMusic() { update { copy(musicOn = !musicOn) }; Audio.musicOn = s.musicOn }
     fun toggleSound() { update { copy(soundOn = !soundOn) }; Audio.soundOn = s.soundOn; Audio.play(Sfx.Tap) }
