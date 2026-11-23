@@ -536,6 +536,8 @@ val stickers: List<Sticker> = buildList {
     add(Sticker("skate", "Twirled 6 times on the ice", "snowman"))
     add(Sticker("sled", "Won the sled race against Pip", "sled"))
     add(Sticker("photo", "Took a photo with friends", "presents"))
+    add(Sticker("restaurant", "Ate at Elf's Restaurant", "spaghetti"))
+    add(Sticker("mybday", "Had a birthday party!", "cake"))
 }
 
 /** Sticker milestones and their prizes. */
@@ -566,7 +568,9 @@ enum class Place(val title: String, val sprite: String, val side: Side, val colo
     Pets("Pets", "pet_penguin", Side.Right, hex(0xF2A93B)),
     Town("Town", "house", Side.Hidden, hex(0x3D6FD6)),
     House("House", "house", Side.Hidden, hex(0x9A5B34)),
-    Mail("Mailbox", "mailbox", Side.Hidden, hex(0xE5394B)),   // visiting a friend (GameState.visiting)
+    Mail("Mailbox", "mailbox", Side.Hidden, hex(0xE5394B)),
+    Restaurant("Elf's Restaurant", "spaghetti", Side.Hidden, hex(0xC0392B)),   // on the Town map
+    Birthday("Birthday Party", "cake", Side.Hidden, hex(0xFF8FB0)),   // visiting a friend (GameState.visiting)
     Party("Party", "balloon", Side.Right, hex(0xFF5FA2)),
     Advent("Advent Calendar", "gift", Side.Hidden, hex(0xA02338)),
     Stickers("Sticker Book", "teddy", Side.Hidden, hex(0x9B6BE0)),
@@ -700,6 +704,50 @@ val movies = listOf(
             Scene("The elves helped find every present in the snow.", NIGHT_SKY, SNOW, listOf(Actor("@me", 0.25f, 100, dx = 0.1f), Actor("@Pip", 0.6f, 90, dx = 0.1f), Actor("gift", 0.45f, 30), Actor("presents", 0.85f, 50))),
             Scene("Then Santa let them ride in the sleigh to deliver them all! WHEEE! 🛷", NIGHT_SKY, SNOW, listOf(Actor("sleigh", 0.05f, 55, up = 100f, dx = 0.6f, dy = 30f), Actor("reindeer", 0.27f, 55, up = 105f, dx = 0.6f, dy = 30f))),
             Scene("Back home in bed, they smiled. Best. Night. EVER. THE END 🎅", NIGHT_SKY, WOOD, listOf(Actor("@me", 0.35f, 100), Actor("@Pip", 0.6f, 90)), snow = false),
+        ),
+    ),
+    Movie(
+        "A Day in the Life of an Elf", 3, "teddy", listOf(
+            Scene("Ring ring! The alarm clock rings. Time to get up, little elf! ⏰", DAY_SKY, WOOD, listOf(Actor("bed", 0.35f, 60), Actor("@me", 0.7f, 100, dy = 10f)), snow = false),
+            Scene("First job: bake cookies! Stir, stir, stir! 🍪", 0xFFE3C2L, WOOD, listOf(Actor("@me", 0.3f, 100), Actor("cookie_sugar", 0.6f, 40), Actor("cookie_choco", 0.78f, 40)), snow = false),
+            Scene("Then make toys in the Workshop! Bang, bang, bang! 🔨", 0xFFD9D2L, WOOD, listOf(Actor("@me", 0.25f, 100), Actor("teddy", 0.55f, 50), Actor("train", 0.8f, 40)), snow = false),
+            Scene("Feed the reindeer their carrots. Munch munch! 🥕", DAY_SKY, SNOW, listOf(Actor("reindeer", 0.6f, 90), Actor("carrot", 0.35f, 30), Actor("@me", 0.15f, 100))),
+            Scene("Fly the sleigh and deliver presents! Wheee! 🛷", NIGHT_SKY, SNOW, listOf(Actor("sleigh", 0.05f, 55, up = 100f, dx = 0.6f, dy = 20f), Actor("reindeer", 0.27f, 55, up = 105f, dx = 0.6f, dy = 20f))),
+            Scene("Then a party with friends! 🎉", NIGHT_SKY, WOOD, listOf(Actor("@me", 0.3f, 100), Actor("@Twinkle", 0.55f, 100), Actor("presents", 0.82f, 50)), snow = false),
+            Scene("Night night, little elf. Tomorrow we do it all again! THE END 💤", NIGHT_SKY, WOOD, listOf(Actor("bed", 0.5f, 70)), snow = false),
+        ),
+    ),
+    Movie(
+        "The Biggest Little Elf", 5, "tree", listOf(
+            Scene("One morning, Bramble woke up... and he was SUPER tall! 😲", DAY_SKY, WOOD, listOf(Actor("@Bramble", 0.5f, 170)), snow = false),
+            Scene("BONK! He bumped his head on the door. \"Ouch!\"", DAY_SKY, WOOD, listOf(Actor("@Bramble", 0.5f, 170, dy = -5f), Actor("@Pip", 0.2f, 70)), snow = false),
+            Scene("His chair was too small. His bed was too small. Even his hat was too small!", DAY_SKY, WOOD, listOf(Actor("@Bramble", 0.6f, 170), Actor("rockchair", 0.25f, 50)), snow = false),
+            Scene("\"I don't fit anywhere!\" Bramble felt sad. 😢", DAY_SKY, SNOW, listOf(Actor("@Bramble", 0.5f, 170))),
+            Scene("But oh no! The star fell off the very top of the Town Tree!", NIGHT_SKY, SNOW, listOf(Actor("tree", 0.5f, 150), Actor("@Pip", 0.2f, 70), Actor("@Poppy", 0.8f, 80))),
+            Scene("Nobody could reach... except Bramble! He put the star right back on top! ⭐", NIGHT_SKY, SNOW, listOf(Actor("tree", 0.5f, 150), Actor("@Bramble", 0.72f, 170))),
+            Scene("Being different made him special. Hooray for Bramble! THE END 🌟", NIGHT_SKY, SNOW, listOf(Actor("@Bramble", 0.5f, 170), Actor("@Pip", 0.2f, 70), Actor("@me", 0.82f, 90))),
+        ),
+    ),
+    Movie(
+        "The Pumpkin Who Found Christmas", 6, "pumpkin", listOf(
+            Scene("Far, far away is spooky Pumpkin Town, where it's ALWAYS Halloween. 🎃", NIGHT_SKY, 0x3A2A4AL, listOf(Actor("pumpkin", 0.3f, 60), Actor("pumpkin", 0.7f, 45)), snow = false),
+            Scene("One night, Jack the pumpkin found a sparkly snow globe...", NIGHT_SKY, 0x3A2A4AL, listOf(Actor("pumpkin", 0.35f, 60), Actor("snowglobe", 0.65f, 60)), snow = false),
+            Scene("WHOOSH! He tumbled right into Christmas Town! Snow? What's SNOW?! ❄️", DAY_SKY, SNOW, listOf(Actor("pumpkin", 0.4f, 60, dy = 30f), Actor("tree", 0.8f, 130))),
+            Scene("Jack wanted to make toys too. But his toys were a little bit... spooky! 👻", 0xFFD9D2L, WOOD, listOf(Actor("pumpkin", 0.3f, 60), Actor("robot", 0.6f, 50), Actor("drum", 0.82f, 40)), snow = false),
+            Scene("\"It's okay!\" said the elves. \"We'll show you how!\" 🧸", 0xFFD9D2L, WOOD, listOf(Actor("@me", 0.25f, 100), Actor("@Jingle", 0.5f, 100), Actor("pumpkin", 0.78f, 55), Actor("teddy", 0.92f, 35)), snow = false),
+            Scene("Santa laughed. \"Ho ho ho! A pumpkin elf!\" and gave Jack a tiny hat. 🎅", NIGHT_SKY, SNOW, listOf(Actor("santa", 0.35f, 130), Actor("pumpkin", 0.65f, 60))),
+            Scene("Now every year, Halloween and Christmas visit each other! THE END 🎃🎄", NIGHT_SKY, SNOW, listOf(Actor("pumpkin", 0.25f, 55), Actor("tree", 0.55f, 130), Actor("@me", 0.82f, 90))),
+        ),
+    ),
+    Movie(
+        "Santa's Snowstorm Rescue", 4, "sleigh", listOf(
+            Scene("On Christmas Eve, a GIANT snowstorm blew into the sky! 🌨️", NIGHT_SKY, SNOW, listOf(Actor("snowman", 0.3f, 90), Actor("tree", 0.75f, 120))),
+            Scene("Clunk! Santa's sleigh got stuck in a snowdrift. Oh no!", NIGHT_SKY, SNOW, listOf(Actor("sleigh", 0.45f, 50), Actor("santa", 0.75f, 110), Actor("reindeer", 0.15f, 60))),
+            Scene("Holly the inventor zoomed in with her Snow-Zapper 3000! 🔬", NIGHT_SKY, SNOW, listOf(Actor("@Holly", 0.1f, 100, dx = 0.3f), Actor("sleigh", 0.7f, 50))),
+            Scene("ZAP! The snow melted... but the reindeer couldn't see in the storm.", NIGHT_SKY, SNOW, listOf(Actor("reindeer", 0.3f, 60), Actor("reindeer", 0.6f, 55), Actor("@Holly", 0.85f, 90))),
+            Scene("So the elves held up glowing snow globes to light the way! ✨", NIGHT_SKY, SNOW, listOf(Actor("@me", 0.2f, 100), Actor("snowglobe", 0.4f, 40), Actor("@Pip", 0.62f, 80), Actor("snowglobe", 0.8f, 40))),
+            Scene("Up, up and away! Santa flew through the storm! 🛷", NIGHT_SKY, SNOW, listOf(Actor("sleigh", 0.05f, 55, up = 100f, dx = 0.6f, dy = 30f), Actor("reindeer", 0.27f, 55, up = 105f, dx = 0.6f, dy = 30f))),
+            Scene("Every present arrived just in time. Teamwork! THE END 🎁", DAY_SKY, SNOW, listOf(Actor("presents", 0.3f, 60), Actor("santa", 0.55f, 120), Actor("@Holly", 0.8f, 90))),
         ),
     ),
     Movie(
@@ -874,3 +922,20 @@ fun isBirthday(npc: Npc, day: Int) = (day - 1) % 28 + 1 == birthdayOf(npc)
 val photoProps = listOf("🎩", "👑", "🕶️", "🎀", "🦌", "🎉")
 val photoBackdrops = listOf(0xFF8FB0L, 0x9BC8EEL, 0xFFE08AL, 0xB79CFFL, 0x9FE0B0L)
 const val MAX_PHOTOS = 12
+
+// MARK: - Elf's Restaurant (Lexi's menu!)
+
+enum class Dish(val title: String, val price: Int, val energy: Int, val sprite: String) {
+    Spaghetti("Spaghetti", 12, 15, "spaghetti"),
+    Ratatouille("Ratatouille", 14, 15, "ratatouille"),
+    StrawberryLasagna("Strawberry Lasagna", 15, 18, "lasagna"),
+    SugarPlums("Sugar Plums", 6, 8, "sugarplums"),
+    Gingerbread("Gingerbread", 5, 8, "cookie_ginger"),
+    ApplePie("Apple Pie", 8, 10, "pie"),
+    Tanghulu("Christmas Tanghulu", 7, 8, "tanghulu"),
+    HotChocolate("Hot Chocolate", 4, 6, "cocoa_mug"),
+}
+const val WAITER = "Gingersnap"
+val monthNames = listOf("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
+val daysInMonth = listOf(31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+const val MAX_PARTY_GUESTS = 5

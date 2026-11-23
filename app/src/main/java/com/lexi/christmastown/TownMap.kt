@@ -54,7 +54,8 @@ fun TownScreen(game: GameState) {
                 Triple(Place.Bank, hex(0xFFF1C9), hex(0x2F6B4F)) to BANKER,
                 Triple(Place.Party, hex(0xE8D5F2), hex(0xFF5FA2)) to "Sprout",
                 Triple(Place.Park, hex(0xD6E6F5), hex(0x3D6FD6)) to "Snowflake",
-                Triple(Place.Friends, hex(0xF4E3C3), hex(0xE5394B)) to "Gingersnap",
+                Triple(Place.Friends, hex(0xF4E3C3), hex(0xE5394B)) to "Holly",
+                Triple(Place.Restaurant, hex(0xFFF6E6), hex(0xC0392B)) to WAITER,
             )
             for (row in buildings.chunked(3)) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 for ((b, keeper) in row) {

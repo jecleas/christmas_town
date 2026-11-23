@@ -233,6 +233,9 @@ fun RoomScene(game: GameState, floor: Int, hub: Boolean) {
         if (hub) {
             // Table of today's goodies
             Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                if (game.birthdayPartyReady) Btn(Pal.pink, Modifier.width(240.dp).padding(bottom = 6.dp), onClick = { game.go(Place.Birthday) }) {
+                    Px("cake", 24.dp); Txt("It's your birthday! Party! 🎉", 14, Color.White, maxLines = 1)
+                }
                 val party = s.homeGuests.any { n -> npcs.any { it.name == n && game.birthdayToday(it) } }
                 val goodies = (if (party) listOf("cake") else emptyList()) + Cookie.entries.flatMap { c -> List(minOf(s.cookies.n(c), 3)) { c.sprite } } +
                     Toy.entries.flatMap { t -> List(minOf(s.toys.n(t), 2)) { t.sprite } }

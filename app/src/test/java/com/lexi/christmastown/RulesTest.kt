@@ -68,6 +68,15 @@ class RulesTest {
         assertTrue(photoProps.isNotEmpty() && photoBackdrops.isNotEmpty())
     }
 
+    @Test fun lexisRestaurantMenuAndBirthday() {
+        val menu = Dish.entries.map { it.title }
+        for (d in listOf("Spaghetti", "Ratatouille", "Sugar Plums", "Gingerbread", "Apple Pie", "Strawberry Lasagna", "Christmas Tanghulu", "Hot Chocolate")) assertTrue(d in menu)
+        assertTrue(movies.size >= 11)
+        assertEquals(12, monthNames.size)
+        val old = json.decodeFromString<Save>("""{"name":"Lexi"}""")
+        assertEquals(0, old.myBirthMonth)
+    }
+
     @Test fun christmasEveAfterTenWorkdays() = assertEquals(10, CHRISTMAS_EVE_WORKDAYS)
 
     @Test fun eightLevelsReachedBeforeChristmasEve() {

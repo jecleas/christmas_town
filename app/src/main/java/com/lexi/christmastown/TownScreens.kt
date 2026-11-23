@@ -199,6 +199,16 @@ fun CreatorScreen(game: GameState) {
             Opt("Hat") { for (h in Hat.entries) Preview(game, look.copy(hat = h), look.hat == h, h !in s.hats) { look = look.copy(hat = h) } }
             Opt("Hat color") { ElfColors.clothes.forEachIndexed { i, c -> Swatch(c, look.hatColor == i) { look = look.copy(hatColor = i) } } }
             Opt("Extras") { for (a in Accessory.entries) Preview(game, look.copy(accessory = a), look.accessory == a, a !in s.accessories) { look = look.copy(accessory = a) } }
+            Opt("🎂 My birthday") {
+                val m = s.myBirthMonth; val d = s.myBirthDay
+                Btn("◀", Pal.pink, 15, Modifier.width(48.dp)) { game.setMyBirthday(if (m == 0) 1 else m - 1, maxOf(d, 1)) }
+                Txt(if (m == 0) "Not set" else monthNames[m - 1], 16, modifier = Modifier.width(110.dp), align = TextAlign.Center)
+                Btn("▶", Pal.pink, 15, Modifier.width(48.dp)) { game.setMyBirthday(m + 1, maxOf(d, 1)) }
+                Btn("−", Pal.pink, 15, Modifier.width(44.dp), enabled = m > 0) { game.setMyBirthday(m, d - 1) }
+                Txt(if (m == 0) "-" else "$d", 18, modifier = Modifier.width(34.dp), align = TextAlign.Center)
+                Btn("+", Pal.pink, 15, Modifier.width(44.dp), enabled = m > 0) { game.setMyBirthday(m, d + 1) }
+            }
+            Txt("On your birthday you can throw a party with your friends! 🎉", 13, Pal.brown)
             Txt("🔒 Locked things can be bought in the Shop!", 14, Pal.brown)
         }
     }

@@ -157,9 +157,11 @@ fun backgroundFor(p: Place?): Brush = when (p) {
     Place.Town -> Brush.verticalGradient(listOf(hex(0x2C4F8C), hex(0x9BC8EE)))
     Place.House -> Brush.verticalGradient(listOf(hex(0x3A2A4A), hex(0x7A5A6A)))
     Place.Mail -> Brush.verticalGradient(listOf(hex(0x7A1E2E), hex(0xD9A066)))
+    Place.Restaurant -> Brush.verticalGradient(listOf(hex(0x5A1A14), hex(0xC0392B)))
+    Place.Birthday -> Brush.verticalGradient(listOf(hex(0x5B3A8C), hex(0xFF8FB0)))
 }
 
-private val darkPlaces = setOf(null, Place.Decorate, Place.Snacks, Place.Phone, Place.Stable, Place.SantaList, Place.Sleigh, Place.Friends, Place.Closet, Place.Park, Place.Advent, Place.Stickers, Place.Party, Place.Town, Place.House, Place.Mail)
+private val darkPlaces = setOf(null, Place.Decorate, Place.Snacks, Place.Phone, Place.Stable, Place.SantaList, Place.Sleigh, Place.Friends, Place.Closet, Place.Park, Place.Advent, Place.Stickers, Place.Party, Place.Town, Place.House, Place.Mail, Place.Restaurant, Place.Birthday)
 fun textOn(p: Place?) = if (p in darkPlaces) Color.White else Pal.ink
 
 // MARK: - The whole app
@@ -195,6 +197,8 @@ fun GameApp(game: GameState) {
                 Place.Town -> Music.GoodKingWenceslas
                 Place.House -> Music.SilentNight
                 Place.Mail -> Music.JollyOldStNicholas
+                Place.Restaurant -> Music.WeWish
+                Place.Birthday -> Music.HappyBirthday
             }
         }
         LaunchedEffect(song) { Audio.music(song) }
@@ -249,6 +253,8 @@ private fun PlaceScreen(game: GameState, p: Place) = when (p) {
     Place.Town -> TownScreen(game)
     Place.House -> FriendHouseScreen(game)
     Place.Mail -> MailScreen(game)
+    Place.Restaurant -> RestaurantScreen(game)
+    Place.Birthday -> BirthdayScreen(game)
 }
 
 /** A full-screen activity: big Back button, title, money and energy, then the content. */
@@ -257,7 +263,7 @@ fun Activity(game: GameState, title: String, onBack: (() -> Unit)?, content: @Co
     Column(Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (onBack != null) Btn("← Back", Pal.red, 17, Modifier.width(100.dp), onClick = onBack)
-            Txt(title, 22, textOn(if (game.showCreator || !game.s.hasElf) Place.Closet else game.place), modifier = Modifier.weight(1f), maxLines = 1)
+            Txt(title, if (title.length > 13) 18 else 22, textOn(if (game.showCreator || !game.s.hasElf) Place.Closet else game.place), modifier = Modifier.weight(1f), maxLines = 1)
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 MoneyChip(game)
                 EnergyChip(game)

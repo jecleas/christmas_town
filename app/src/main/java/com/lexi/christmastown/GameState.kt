@@ -117,6 +117,11 @@ sealed interface Overlay {
     val skateDay: Int = 0,
     val sledDay: Int = 0,
     val photos: List<Photo> = emptyList(),
+    // Your birthday (month 1-12, day 1-31; 0 = not set) and Elf's Restaurant
+    val myBirthMonth: Int = 0,
+    val myBirthDay: Int = 0,
+    val birthdayPartyYear: Int = 0,
+    val ateOutDay: Int = 0,
 )
 
 /** Stickers you've earned just by what's in your save (things you own, pets, friends...). */
@@ -279,6 +284,7 @@ class GameState(private val prefs: SharedPreferences) {
             )
         }
         overlay = Overlay.Morning(s.day, worked, interest)
+        birthdayDance = false
         newDay()
         place = null
     }
@@ -839,7 +845,8 @@ class GameState(private val prefs: SharedPreferences) {
         val writers = (npcs.filter { s.hearts.n(it.name) > 0 }.ifEmpty { npcs }).shuffled(r).take(if (s.day == 1) 1 else 2)
         val mail = writers.map { Letter(it.name, letterTemplates.random(r).replace("%me", s.name), s.day) } +
             npcs.filter { isBirthday(it, s.day) }.map { Letter("Maple", "Psst, ${s.name}! Today is ${it.name}'s BIRTHDAY! 🎂 Go and say happy birthday!", s.day) }
-        update { copy(dailyDay = day, favours = favours, letters = (mail + letters).take(20)) }
+        val birthdayMail = if (isMyBirthday) listOf(Letter("Maple", "🎂 HAPPY BIRTHDAY, ${s.name}!!! 🎂 Everyone in Christmas Town is so excited! Tap the birthday button at home to throw your party! 🎉", s.day)) else emptyList()
+        update { copy(dailyDay = day, favours = favours, letters = (birthdayMail + mail + letters).take(20)) }
     }
 
     val unreadLetters get() = s.letters.count { !it.read }
@@ -937,6 +944,57 @@ class GameState(private val prefs: SharedPreferences) {
             checkBestFriend(pip)
         }
         say(if (won) "You WON the sled race! 🏆🛷" else "Pip won this time! Race again? 🛷")
+    }
+
+    // MARK: Your birthday
+
+    private fun today() = java.util.Calendar.getInstance()
+    private val thisYear get() = today().get(java.util.Calendar.YEAR)
+
+    /** Is it your birthday today (by the phone's calendar)? */
+    val isMyBirthday get() = s.myBirthMonth > 0 && today().let { it.get(java.util.Calendar.MONTH) + 1 == s.myBirthMonth && it.get(java.util.Calendar.DAY_OF_MONTH) == s.myBirthDay }
+    val birthdayPartyReady get() = isMyBirthday && s.birthdayPartyYear != thisYear
+
+    fun setMyBirthday(month: Int, day: Int) {
+        val m = ((month - 1).mod(12)) + 1
+        update { copy(myBirthMonth = m, myBirthDay = ((day - 1).mod(daysInMonth[m - 1])) + 1) }
+    }
+
+    /** At the end of the party your friends give you presents (furniture and decorations for your house). */
+    fun birthdayPresents(guests: List<Npc>): List<Pair<Npc, Item>> {
+        val r = kotlin.random.Random(thisYear + s.day)
+        val gifts = guests.map { it to Item.entries.filter { i -> i.price in 100..600 }.random(r) }
+        update { copy(owned = gifts.fold(owned) { o, (_, item) -> o.add(item, 1) }, birthdayPartyYear = thisYear) }
+        sticker("mybday")
+        Audio.play(Sfx.LevelUp)
+        return gifts
+    }
+
+    /** The friends who come dancing with you at the Party Place after your birthday dinner. */
+    var partyWith by mutableStateOf<List<String>>(emptyList())
+    /** On your birthday the Party Place is open for you, whatever your level. */
+    var birthdayDance by mutableStateOf(false)
+
+    // MARK: Elf's Restaurant
+
+    /** Pay for a meal (free on your birthday!). */
+    fun orderMeal(total: Int, free: Boolean): Boolean {
+        if (free) { say("Happy birthday! Your meal is FREE today! 🎂"); Audio.play(Sfx.Ding); return true }
+        if (!pay(total)) return false
+        say("Your food is coming! 🍝")
+        return true
+    }
+
+    /** Eating together: energy for you, and +1 💖 for each friend at the table (once a day). */
+    fun finishMeal(friends: List<Npc>, yours: Dish?) {
+        sticker("restaurant")
+        update { copy(energy = (energy + (yours?.energy ?: 0)).coerceAtMost(100)) }
+        if (s.ateOutDay != s.day && friends.isNotEmpty()) {
+            update { copy(ateOutDay = day, hearts = friends.fold(hearts) { h, f -> h.add(f.name, 1) }.mapValues { it.value.coerceAtMost(5) }) }
+            friends.forEach { checkBestFriend(it) }
+            say("What a yummy meal with friends! +1 💖 each")
+        } else say("Yum! That was delicious! 😋")
+        Audio.play(Sfx.Ding)
     }
 
     // MARK: Photo booth

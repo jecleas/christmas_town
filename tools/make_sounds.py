@@ -175,3 +175,10 @@ td = [('G4',.5),('G4',.5),('G4',1),('C5',.5),('C5',.5),('C5',1),('B4',.5),('C5',
 td = td + td + [('G5',2),('D5',1),('E5',1),('C5',3),('R',1)] + td
 save('music_twelve_days.wav', song2(td, [C, C, F, G, C, C, F, G, C, C, G, C, C, F, G, C], 150, 4, bells=True, duty=0.25))
 print('expansion songs done')
+
+# Happy Birthday (public domain since 2016) for your birthday party, 3/4 with a pickup
+hb = [('R',2),('G4',.75),('G4',.25), ('A4',1),('G4',1),('C5',1), ('B4',2),('G4',.75),('G4',.25), ('A4',1),('G4',1),('D5',1),
+      ('C5',2),('G4',.75),('G4',.25), ('G5',1),('E5',1),('C5',1), ('B4',1),('A4',1),('F5',.75),('F5',.25), ('E5',1),('C5',1),('D5',1), ('C5',3)]
+hb = hb + hb[1:]
+save('music_happy_birthday.wav', song2(hb, [C, C, G, G, C, C, F, G, C] * 2, 120, 3, bells=True, duty=0.25))
+print('birthday song done')

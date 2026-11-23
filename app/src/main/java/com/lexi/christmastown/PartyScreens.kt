@@ -62,7 +62,13 @@ fun PartyScreen(game: GameState) {
     var tab by remember { mutableStateOf(PartyTab.Juice) }
     var busy by remember { mutableStateOf(false) }   // playing a game or watching a movie: hide the tabs
     val brought = remember { mutableStateListOf<Npc>() }   // friends you came out of the movie with
-    if (!game.partyOpen) {
+    // straight from your birthday dinner: dance with your party guests
+    LaunchedEffect(game.partyWith) {
+        if (game.partyWith.isEmpty()) return@LaunchedEffect
+        brought.clear(); brought.addAll(npcs.filter { it.name in game.partyWith }); tab = PartyTab.Dance
+        game.partyWith = emptyList()
+    }
+    if (!game.partyOpen && !game.birthdayDance) {
         LockedParty(game)
     } else {
         Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {

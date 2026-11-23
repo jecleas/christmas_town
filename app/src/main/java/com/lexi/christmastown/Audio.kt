@@ -33,6 +33,7 @@ enum class Music(val res: Int) {
     JollyOldStNicholas(R.raw.music_jolly_old_st_nicholas), // Pets
     GoodKingWenceslas(R.raw.music_good_king_wenceslas),    // snowball fight
     TwelveDays(R.raw.music_twelve_days),                   // wrapping presents
+    HappyBirthday(R.raw.music_happy_birthday),             // your birthday party
 }
 
 object Audio {
